@@ -9,6 +9,9 @@
   Rerun the table any time with `bash run_umiacs.sh seeds-summary --local` style: `python scripts/summarize_seeds.py`.
 - Resubmit failures: check `sacct -u $USER -S today -X`; logs `results/logs/ripen-seeds-<i>-<jobid>.out`.
 
+- 2026-11-03: verified done. All 37 seed jobs + summary job COMPLETED (exit 0), 5 seeds x 37 runs present,
+  no errors in logs, results/runs untouched. summary.md committed (seed dirs are gitignored, 389M on disk only).
+
 ## C-MAPSS fpt_filter C-index 0.249 (diagnosed, not rerun: avocado-only run requested)
 - Not a metric bug: `harrell_cindex(-median)` is shared by all models and fine elsewhere.
 - Saved test predictions: predicted median vs true time-to-failure corr -0.65; predicted median vs elapsed
