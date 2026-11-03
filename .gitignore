@@ -21,6 +21,7 @@ experiments/demo_video/_cache/
 !/data/manifests/
 results/runs/
 results/logs/
+results/avocado_seeds/seed*/
 results/synthetic/run/
 outputs/
 multirun/

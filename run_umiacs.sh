@@ -25,6 +25,7 @@
 #   e5         second domains: PBC2 and C-MAPSS                      results/runs/<model>_{pbc2,cmapss}
 #   e6         A2SL multimodal avocados (photos + microwave)         results/runs/<model>_a2sl
 #   summary    results/summary.md
+#   seeds      independent multi-seed rerun of e1-e4 (avocado only)  results/avocado_seeds/, summary.md there
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck disable=SC1091
@@ -132,6 +133,35 @@ stage_e6() {
   JOBS[e6_gen]=$(submit e6-generative "$PY scripts/train.py model=latent_sde data=a2sl horizon=20 train.batch_size=8 model.decode_features=true run_name=latent_sde_a2sl_generative")
 }
 
+# Independent multi-seed rerun of every avocado experiment (e1-e4), written to results/avocado_seeds/seed<s>/<run>
+# so results/runs is never touched. One job per run, looping over seeds; RIPEN_SEEDS overrides the seed list.
+AVOCADO_RUNS=()
+for m in "${MODELS[@]}"; do AVOCADO_RUNS+=("model=$m"); done
+AVOCADO_RUNS+=("model=latent_sde +experiment=labels_only"
+  "model=latent_sde model.event_likelihood=pde run_name=latent_sde_avocado_pde"
+  "model=latent_sde model.event_likelihood=mc run_name=latent_sde_avocado_mc"
+  "model=fpt_filter run_name=fpt_filter_avocado_exact")
+for g in T10 T20 Tamb; do
+  for m in direct_reg gru_d latent_sde fpt_filter; do AVOCADO_RUNS+=("model=$m +experiment=logo splits.held_out=$g"); done
+  for c in group fixed; do AVOCADO_RUNS+=("model=latent_sde +experiment=logo splits.held_out=$g model.clock=$c run_name=latent_sde_avocado_logo_${g}_clock_$c"); done
+done
+for k in 2 3; do for m in gru_d latent_ode latent_sde; do AVOCADO_RUNS+=("model=$m +experiment=sampling_every$k"); done; done
+
+stage_seeds() {
+  local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
+  for args in "${AVOCADO_RUNS[@]}"; do
+    local cmd="fail=0; for s in $seeds; do $PY scripts/train.py data=avocado $args seed=\$s +train.seed=\$s 'out_dir=results/avocado_seeds/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
+    JOBS[seeds_$i]=$(submit "seeds-$i" "$cmd"); [[ "${JOBS[seeds_$i]}" != local ]] && deps+=("${JOBS[seeds_$i]}"); i=$((i + 1))
+  done
+  # afterany: one failed seed should not block the table for the rest
+  if [[ $LOCAL -eq 1 ]]; then "$PY" scripts/summarize_seeds.py; else
+    local dep=""; [[ ${#deps[@]} -gt 0 ]] && dep="--dependency=afterany:$(IFS=:; echo "${deps[*]}")"
+    JOBS[seeds_summary]=$(sbatch --parsable --job-name=ripen-seeds-summary --output="results/logs/%x-%j.out" --time=00:30:00 \
+      --cpus-per-task=1 --mem=4G --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" $dep \
+      --wrap="cd '$RIPEN_ROOT' && source '$RIPEN_ENV/bin/activate' && $PY scripts/summarize_seeds.py")
+  fi
+}
+
 stage_summary() {
   local deps=(); for j in "${JOBS[@]}"; do [[ "$j" != local ]] && deps+=("$j"); done
   JOBS[summary]=$(submit summary "$PY scripts/summarize.py" "${deps[@]}")
@@ -152,6 +182,8 @@ case "$STAGE" in
   e5) stage_e5 ;;
   e6) stage_e6 ;;
   summary) stage_summary ;;
+  seeds) stage_seeds ;;
+  seeds-summary) "$PY" scripts/summarize_seeds.py ;;
   all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e5; stage_e6; stage_summary ;;
   *) die "unknown stage $STAGE" ;;
 esac
