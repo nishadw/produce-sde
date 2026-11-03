@@ -124,7 +124,11 @@ def markov_interval_log_lik(
 
         log L = sum_{k < anchor} log bridge_k + log[ S(kappa (lo - t_a) | r_a) - S(kappa (hi - t_a) | r_a) ]
 
-    with the second term inside the bracket dropped when right-censored. A zero-width interval (the first
+    with the second term inside the bracket dropped when right-censored. When the first spoiled visit (at ``hi``)
+    is itself visible, its latent ``r_hi`` is known too, so the last interval is a bridge as well and its factor is
+    the bridge crossing probability ``1 - bridge(r_a, r_hi)``; the table term ``P(tau <= hi | r_a)`` would ignore
+    ``r_hi`` and count the crossing evidence a second time. (Training prefixes end before the spoiled visit, so this
+    case arises when a whole sequence is scored, e.g. ``n_obs="all"``.) A zero-width interval (the first
     visit already spoiled) is widened to ``(lo, lo + ds / kappa]`` so it keeps a gradient toward the boundary.
     """
     V = t.shape[0]
@@ -148,4 +152,13 @@ def markov_interval_log_lik(
     s_lo = lookup(S, r_grid, ds, kappa * jnp.clip(spoil_lo - t_a, 0.0, None), r_a)
     s_hi = lookup(S, r_grid, ds, kappa * jnp.clip(spoil_hi + width - t_a, 0.0, None), r_a)
     last = jnp.where(right_censored, s_lo, s_lo - s_hi)
+    # spoiled visit observed (and the interval has width): crossing probability of the bridge from the anchor to it
+    is_hi = visible & (jnp.abs(t - spoil_hi) < 1e-6)
+    hi_seen = jnp.any(is_hi) & ~right_censored & (spoil_hi - spoil_lo >= 1e-6)
+    k_hi = jnp.argmax(is_hi)
+    if sigma_at is not None:
+        gap_hi = jnp.clip(b - r_a, 0.0, None) * jnp.clip(b - r_at[k_hi], 0.0, None)
+        dt_hi = jnp.clip(t[k_hi] - t_a, 1e-6, None)
+        cross = jnp.exp(-2.0 * gap_hi / (sigma_at[anchor] ** 2 * kappa * dt_hi + 1e-9))
+        last = jnp.where(hi_seen, cross, last)
     return log_prod + jnp.log(jnp.clip(last, 1e-8, 1.0))

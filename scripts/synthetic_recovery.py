@@ -4,6 +4,8 @@ results/synthetic/recovery.json and results/synthetic/recovery.png.
 
     python scripts/synthetic_recovery.py                 # ~5-10 min on CPU
     python scripts/synthetic_recovery.py --quick         # ~1 min, looser
+    python scripts/synthetic_recovery.py --guided --out results/synthetic_guided
+        # guided posterior + predictive event term + stage-unit z0 prior (docs/verifier_report.md, rate-recovery bias)
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ def main() -> None:
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--out", default="results/synthetic")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--guided", action="store_true", help="guided posterior, log-mean event term, stage-unit z0 prior")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -55,6 +58,11 @@ def main() -> None:
         n_sub=2,
         n_train_samples=4,
         n_samples=256,
+        **(
+            {"posterior_guidance": True, "event_mean": "log_mean", "z0_prior_mean": 1.5, "z0_prior_std": 0.5}
+            if args.guided
+            else {}
+        ),
     )
     tcfg = TrainConfig(
         epochs=8 if args.quick else 40, batch_size=32, lr=1e-2, patience=8, n_obs_mode="random", seed=args.seed
@@ -80,6 +88,7 @@ def main() -> None:
         "fpt_max_abs_cdf_err_T20": float(np.max(np.abs(F - cdf_true))),
         "n_items": scfg.n_items,
         "quick": args.quick,
+        "guided": args.guided,
     }
     (out / "recovery.json").write_text(json.dumps(rep, indent=2))
     z = np.linspace(1, 5, 50)

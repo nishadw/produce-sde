@@ -123,6 +123,33 @@ def test_bridge_factor_matches_brownian_bridge_formula(table):
     assert abs(float(ll_one) - (expected + np.log(s_last))) < 1e-3
 
 
+def test_visible_spoiled_visit_counts_the_crossing_once(table):
+    """When the first spoiled visit is visible its latent is known, so the last interval is a bridge too: its factor
+    is the bridge crossing probability (1 once r_hi is past the boundary), not P(tau <= hi | r_lo) from the table,
+    which would count the crossing a second time on top of the stage label."""
+    S, r = table
+    t, vis, sig = jnp.array([0.0, 1.0, 2.0]), jnp.array([1, 1, 1], bool), jnp.full(3, SIG)
+    lo, hi, rc = jnp.asarray(1.0), jnp.asarray(2.0), jnp.asarray(False)
+    first = np.log(1 - np.exp(-2 * (5 - 4.0) * (5 - 4.6) / SIG**2))  # no crossing in (0, 1]
+    past = jnp.array([4.0, 4.6, 5.2])
+    for kappa in (0.5, 1.0, 2.0):  # past the boundary: the last factor is 1, whatever the clock
+        k = jnp.asarray(kappa)
+        ll = markov_interval_log_lik(S, r, DS, k, t, past, vis, lo, hi, rc, sig)
+        bridge0 = np.log(1 - np.exp(-2 * (5 - 4.0) * (5 - 4.6) / (SIG**2 * kappa)))
+        assert abs(float(ll) - bridge0) < 1e-4, (kappa, float(ll), bridge0)
+    # r_hi short of the boundary: crossing probability of the bridge, below 1
+    short = jnp.array([4.0, 4.6, 4.9])
+    ll_short = markov_interval_log_lik(S, r, DS, jnp.asarray(1.0), t, short, vis, lo, hi, rc, sig)
+    expected = first + np.log(np.exp(-2 * (5 - 4.6) * (5 - 4.9) / SIG**2))
+    assert abs(float(ll_short) - expected) < 1e-4
+    # spoiled visit hidden (a forecast): the table term P(tau in (lo, hi] | r_lo) is still used
+    hidden = jnp.array([1, 1, 0], bool)
+    ll_hidden = markov_interval_log_lik(S, r, DS, jnp.asarray(1.0), t, past, hidden, lo, hi, rc, sig)
+    s_lo = float(lookup(S, r, DS, jnp.asarray(0.0), jnp.asarray(4.6)))
+    s_hi = float(lookup(S, r, DS, jnp.asarray(1.0), jnp.asarray(4.6)))
+    assert abs(float(ll_hidden) - (first + np.log(s_lo - s_hi))) < 1e-3
+
+
 def test_zero_width_interval_has_gradient(table):
     S, r = table
     t = jnp.array([0.0, 0.0])

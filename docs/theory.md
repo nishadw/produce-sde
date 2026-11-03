@@ -79,13 +79,17 @@ original paper fits, Table 4), and the ratio of two groups' slopes is `κ_g/κ_{
 `E_a = R ln(κ_1/κ_2) / (1/T_2 − 1/T_1)`. The synthetic recovery test (`tests/test_recovery.py`) is the
 empirical check: rates within 25 %, `σ` within 50 % with 180 fake fruit.
 
-**Caveat — the common factor is confounded with the origin.** The bottom stage is the open set `r < θ_1`,
-so the data do not fix where the latent starts; a lower start plus a faster clock reproduces the same
-transition times. Consequently only the *ratios* `κ_g / κ_{g'}` (hence `E_a`), `σ` in stage units, and the
-forecast CDF are identified; the absolute rate scale is pinned only by the `z₀` prior (learnable mean/variance
-in `LatentDynamics`, or an informative fixed prior in stage units). Verified empirically: in 19 synthetic runs
-the ratios were within 10 % while the common factor wandered by +15–35 % (`docs/verifier_report.md`). The
-recovery tests therefore assert ratios, `σ`, the CDF and `E_a`, not absolute rates. With `μ` an MLP the
+**Correction (2026-11-03): the common factor is identified; the ELBO was biased.** An earlier version of this
+caveat claimed the absolute rate scale is confounded with the latent origin, because the bottom stage is open
+below. It is not: with thresholds fixed in stage units, the time between successive stage crossings fixes `κ`, and
+the time to the first crossing then fixes `z₀`. The exact likelihood (the grid filter, P5) of the synthetic labels
+peaks at the true rates (profiled at `κ = f·κ_true`, `f ∈ {0.85 … 1.35}`). The upward common factor came from the
+latent SDE's ELBO: its variational gap (~4 nats per item on training prefixes) shrinks as the clock speeds up,
+because the Girsanov KL of a fixed correction scales like `1/κ`, so the ELBO's optimum sat 8–32 % fast. Pinning
+`z₀` to the truth did not remove it, and a wider posterior network made it worse. The guided posterior
+(`posterior_guidance=True`: the closed-form h-transform toward the next label) with the predictive event term
+(`event_mean="log_mean"`) halves the gap and brings the rates to −2…+13 % over 5 seeds, so the recovery test now
+asserts absolute rates too (`docs/verifier_report.md`, "Rate-recovery bias"). With `μ` an MLP the
 same statement holds with `μ`'s scale absorbed into the factor. In the avocado data the ambient group's rate exceeds the 20 °C group's, so no monotone `κ(T)` fits
 all three; the paper reports the Arrhenius clock on {T10, T20} + transfer, and the per-group clock as the
 unconstrained comparator.
@@ -129,8 +133,8 @@ the censoring observations at visits (`known alive` → zero cemetery, `known sp
 emissions like any other. The forecast from the last visit is `1 − Σ_i p_i S̃(κh | r_i)` with the filtered
 live density `p` and the survival table of P4.
 
-**Why it matters.** The latent-SDE ELBO identified only the rate ratios (P3): the amortised posterior left a
-gap on the common factor. The filter has no such gap: on the same synthetic data it recovers the absolute
+**Why it matters.** The unguided latent-SDE ELBO recovered only the rate ratios (P3): its variational gap biased
+the common factor. The filter has no such gap: on the same synthetic data it recovers the absolute
 rates within 20 %, `σ` within 40 % and the fresh-fruit CDF within 0.15 (`tests/test_recovery.py::
 test_exact_filter_recovers_rates_sigma_and_fpt`), with the start prior `z₀ ~ N(m, s²)` learnable. Validated by
 an independent verifier against closed-form (image-method) likelihoods and particle-filter Monte Carlo on

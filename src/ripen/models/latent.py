@@ -6,6 +6,8 @@ Latent ``Z = (R, U)``: ``R`` is the scalar progression coordinate, ``U`` carries
                dU = kappa(x) mu_U(R, U) dt + sqrt(kappa(x)) sigma_U(R, U) dW_U
     i.e. the clock multiplies the generator: in physiological time s = kappa t the prior is dR = mu_R ds + sigma_R dW_s.
     posterior  drift += g_phi(Z, ctx, t)   for t <= t_now            (Li et al. 2020)
+               ``posterior_guidance=True`` adds the closed-form h-transform toward the next labelled visit,
+               ``D d/dr log P(stage_next | r_t)`` (a guided proposal; Schauer, van der Meulen & van Zanten 2017)
     stages     stage_k ~ Ordinal(R(t_k))                              (cumulative-link head, thresholds theta)
     features   y_k ~ N(dec(Z(t_k)), s^2 I)                            (optional; unlabeled sequences train the dynamics)
     event      tau = inf { t : R(t) >= b },  b = theta_{K-1}
@@ -36,6 +38,7 @@ from jax import Array
 from nsde import sde_solve
 
 from ..data.collate import Batch
+from ..data.schema import SPOILED_STAGE
 from .clock import make_clock
 from .encoders import SequenceEncoder, VisitEncoder
 from .fpt import crossing_prob, running_max_from
@@ -89,6 +92,8 @@ class LatentDynamics(eqx.Module):
     sigma_prior: float | None = eqx.field(static=True)
     sigma_prior_weight: float = eqx.field(static=True)
     decode_features: bool = eqx.field(static=True)
+    posterior_guidance: bool = eqx.field(static=True)
+    event_mean: str = eqx.field(static=True)  # "log_mean" | "mean_log": how the M samples of the event term combine
     feat_dim: int = eqx.field(static=True)
     pde_grid: int = eqx.field(static=True)
     pde_ds: float = eqx.field(static=True)
@@ -138,6 +143,8 @@ class LatentDynamics(eqx.Module):
         sigma_prior_weight: float = 0.0,
         init_sigma: float = 0.3,
         decode_features: bool = False,
+        posterior_guidance: bool = False,
+        event_mean: str = "mean_log",
         z0_prior_mean: float = 0.0,
         z0_prior_std: float = 1.0,
         z0_prior_learnable: bool = True,
@@ -202,6 +209,12 @@ class LatentDynamics(eqx.Module):
                 self.log_sigma = eqx.nn.MLP(latent_dim, latent_dim, width, 1, activation=tanh, key=ks[4])
         self.readout_w = jnp.concatenate([jnp.ones(1), jnp.zeros(latent_dim - 1)]).astype(jnp.float32)
         self.readout_b = jnp.zeros((), jnp.float32)
+        if posterior_guidance and not structured:
+            raise ValueError("posterior guidance needs the progression-structured prior (structured=True)")
+        self.posterior_guidance = posterior_guidance
+        if event_mean not in ("log_mean", "mean_log"):
+            raise ValueError(event_mean)
+        self.event_mean = event_mean
         self.post_drift = eqx.nn.MLP(latent_dim + hidden + 1, latent_dim, width, 2, activation=tanh, key=ks[7])
         self.head = OrdinalHead(fixed=fixed_thresholds, link_scale=link_scale, learn_scale=learn_link_scale)
         self.clock = make_clock(clock, n_groups, **(clock_kwargs or {}))
@@ -275,8 +288,57 @@ class LatentDynamics(eqx.Module):
         mu = self.prior_drift if self.drift_kind == "linear" else self.prior_drift(z)
         return kappa * mu
 
-    def f_post(self, t: Array, z: Array, ctx: Array, kappa: Array) -> Array:
-        return self.f_prior(z, kappa) + self.post_drift(jnp.concatenate([z, ctx, jnp.atleast_1d(t) / 30.0]))
+    def guidance(self, t: Array, z: Array, kappa: Array, tv: Array, vis: Array, stage: Array) -> Array:
+        """Closed-form h-transform toward the next visible labelled visit, on the progression coordinate.
+
+        Locally the prior is a Brownian motion with drift ``kappa mu_r(r)`` and variance rate ``D = kappa sigma_r^2``,
+        and the ordinal link is close to Gaussian noise of variance ``s^2 pi^2 / 3`` on ``r``. So the probability that
+        the next label (stage k at time t_n) comes out as observed is ``h = Phi(u_hi) - Phi(u_lo)`` with
+        ``u = (theta - r - kappa mu_r (t_n - t)) / sqrt(D (t_n - t) + s^2 pi^2 / 3)``, and the h-transform adds
+        ``D d/dr log h`` to the drift: the exact posterior drift for one observation under a constant-coefficient prior.
+        The learned ``post_drift`` corrects the rest and the Girsanov KL prices the whole correction, so the ELBO stays
+        a valid bound.
+
+        Why: the unguided posterior has to learn this steep bridge from data and leaves a variational gap (~4 nats
+        per item on the synthetic recovery data) that shrinks as the clock speeds up, because the KL of a fixed
+        correction scales like 1/kappa. The ELBO's optimum then sits at rates 8-32% too fast. With guidance the gap
+        is ~2 nats and the rates come out within -2..+13% (docs/verifier_report.md, "Rate-recovery bias")."""
+        nxt = vis & (stage > 0) & (tv > t + 1e-6)
+        has_n = jnp.any(nxt)
+        kn = jnp.argmax(nxt)
+        tau = jnp.clip(tv[kn] - t, 0.0, None)
+        k = jnp.clip(stage[kn], 1, self.head.thresholds().shape[0] + 1)
+        th = self.head.thresholds()
+        # open outer intervals as finite bounds far outside the grid (an infinite bound gives inf * 0 = NaN gradients)
+        th_ext = jnp.concatenate([th[:1] - 1e3, th, th[-1:] + 1e3])
+        lo, hi = th_ext[k - 1], th_ext[k]
+        link_var = (self.head.scale * jnp.pi) ** 2 / 3.0
+
+        def log_h(r):
+            d = kappa * self.sigma_r(r) ** 2
+            m = r + kappa * self.mu_r(r) * tau
+            sd = jnp.sqrt(d * tau + link_var)
+            a, b = (lo - m) / sd, (hi - m) / sd
+            # log(Phi(b) - Phi(a)) from log-CDFs on the side away from the tail; no clipping, because a floor here
+            # makes the second derivative (the loss differentiates this gradient again) overflow float32 to NaN
+            lnd = jax.scipy.special.log_ndtr
+
+            def log_diff(hi_, lo_):  # log(Phi(hi_) - Phi(lo_)), hi_ > lo_
+                delta = jnp.minimum(lnd(lo_) - lnd(hi_), -1e-6)
+                return lnd(hi_) + jnp.log1p(-jnp.exp(delta))
+
+            return jnp.where(a > 0, log_diff(-a, -b), log_diff(b, a))
+
+        r = z[0]
+        d = kappa * self.sigma_r(r) ** 2
+        g = jnp.clip(d * jax.grad(log_h)(r), -20.0, 20.0)
+        return jnp.zeros_like(z).at[0].set(jnp.where(has_n, g, 0.0))
+
+    def f_post(self, t: Array, z: Array, ctx: Array, kappa: Array, loc=None) -> Array:
+        out = self.f_prior(z, kappa) + self.post_drift(jnp.concatenate([z, ctx, jnp.atleast_1d(t) / 30.0]))
+        if self.posterior_guidance:
+            out = out + self.guidance(t, z, kappa, *loc)
+        return out
 
     def rate(self, batch: Batch) -> Array:
         return jnp.clip(self.clock(batch.temp_k, batch.group), 1e-3, self.kappa_max)
@@ -295,18 +357,18 @@ class LatentDynamics(eqx.Module):
         return ctx, mv[:, : self.latent_dim], mv[:, self.latent_dim :]
 
     # ----- one path ------------------------------------------------------------------------------------------------
-    def _solve_path(self, params, static, z0: Array, ctx: Array, t_now: Array, kappa: Array, key: Array) -> Array:
+    def _solve_path(self, params, static, z0: Array, ctx: Array, t_now: Array, kappa: Array, key: Array, loc) -> Array:
         """Posterior dynamics up to ``t_now``, prior after; returns ``[n_steps + 1, latent_dim + 1]`` (last = KL)."""
         D = self.latent_dim
 
         def drift(t, y, args):
-            p, ctx_, t_now_, kappa_ = args
+            p, ctx_, t_now_, kappa_, loc_ = args
             m = eqx.combine(p, static)
             z = y[:D]
             fp = m.f_prior(z, kappa_)
             # latent ODE: the path is the prior ODE from z0 ~ q(z0); a posterior drift would have no KL cost
             # (sigma = 0) and, without stage labels to anchor R (PBC2), drives R off the PDE grid
-            fq = m.f_post(t, z, ctx_, kappa_) if m.kind == "sde" else fp
+            fq = m.f_post(t, z, ctx_, kappa_, loc_) if m.kind == "sde" else fp
             active = t <= t_now_
             # clock on the generator: calendar-time diffusion is sqrt(kappa) * sigma (physiological units)
             s_cal = jnp.sqrt(kappa_) * m.sigma(z)
@@ -315,7 +377,7 @@ class LatentDynamics(eqx.Module):
             return jnp.concatenate([jnp.where(active, fq, fp), jnp.atleast_1d(dkl)])
 
         def diffusion(t, y, args):
-            p, _ctx, _t_now, kappa_ = args
+            p, _ctx, _t_now, kappa_, _loc = args
             m = eqx.combine(p, static)
             return jnp.diag(jnp.concatenate([jnp.sqrt(kappa_) * m.sigma(y[:D]), jnp.zeros(1)]))
 
@@ -324,7 +386,7 @@ class LatentDynamics(eqx.Module):
             drift,
             diffusion,
             y0,
-            (params, ctx, t_now, kappa),
+            (params, ctx, t_now, kappa, loc),
             key,
             t1=self.t_end,
             n_steps=self.n_steps,
@@ -351,10 +413,12 @@ class LatentDynamics(eqx.Module):
         kappa = self.rate(batch)
         keys = jax.random.split(k_path, n * B).reshape(n, B, 2)
 
-        def solve(z, c, tn, ka, kk):
-            return self._solve_path(params, static, z, c, tn, ka, kk)
+        def solve(z, c, tn, ka, kk, tv, vis, st):
+            return self._solve_path(params, static, z, c, tn, ka, kk, (tv, vis, st))
 
-        ys = jax.vmap(jax.vmap(solve), in_axes=(0, None, None, None, 0))(z0, ctx, batch.t_now, kappa, keys)
+        ys = jax.vmap(jax.vmap(solve), in_axes=(0, None, None, None, 0, None, None, None))(
+            z0, ctx, batch.t_now, kappa, keys, batch.t, batch.visible, batch.stage
+        )
         return ys[..., : self.latent_dim], ys[:, :, -1, -1], kl_z0, kappa
 
     # ----- training ------------------------------------------------------------------------------------------------
@@ -365,9 +429,14 @@ class LatentDynamics(eqx.Module):
         r_path = z_path @ self.readout_w + self.readout_b  # [M, B, T]
         idx = jnp.broadcast_to(self._visit_idx(batch.t)[None], (M, B, V))
         r_at = jnp.take_along_axis(r_path, idx, axis=2)  # [M, B, V]
-        # stage likelihood at visible labelled visits
+        # stage likelihood at visible labelled visits. A "spoiled" label means the boundary was crossed at some point
+        # before that visit (tau <= t), not that the latent is past it at the visit: a diffusion can cross and come
+        # back, so scoring it with the ordinal head (r(t) > b) demands more progress than the data shows. With an event
+        # likelihood the spoiled label is scored there instead, as the bridge crossing probability given the latent at
+        # both visits. (Training prefixes end before the spoiled visit; this matters when whole sequences are scored.)
         lp_stage = self.head.log_prob(r_at, jnp.broadcast_to(batch.stage[None], (M, B, V)))
-        w = (batch.visible & (batch.stage > 0))[None]
+        spoiled_by_event = self.spoil_weight > 0
+        w = (batch.visible & (batch.stage > 0) & ~((batch.stage == SPOILED_STAGE) & spoiled_by_event))[None]
         obs_ll = jnp.mean(jnp.sum(jnp.where(w, lp_stage, 0.0), axis=2), axis=0)  # [B]
         if self.decode_features:
             z_at = jnp.take_along_axis(z_path, idx[..., None], axis=2)  # [M, B, V, D]
@@ -390,7 +459,12 @@ class LatentDynamics(eqx.Module):
             ll = jax.vmap(over_items, in_axes=(None, None, 0, None, None, None, None, 0))(
                 kappa, batch.t, r_at, batch.visible, batch.spoil_lo, batch.spoil_hi, batch.right_censored, sig_at
             )  # [M, B]
-            spoil_ll = jnp.mean(ll, axis=0)
+            if self.event_mean == "log_mean":
+                # log of the sample-mean likelihood: the posterior sees only the visible prefix, so the forecast term is
+                # the predictive log E_q P(event | r_now) rather than E_q log P(event | r_now)
+                spoil_ll = jax.nn.logsumexp(ll, axis=0) - jnp.log(M)
+            else:
+                spoil_ll = jnp.mean(ll, axis=0)
         else:
             rm = jax.vmap(jax.vmap(lambda r: running_max_from(r, 0)))(r_path)
             crossed = jnp.mean(crossing_prob(rm, self.head.boundary, self.fpt_beta), axis=0)  # [B, T]

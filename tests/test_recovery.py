@@ -2,9 +2,11 @@
 clock must recover what the model identifies (docs/theory.md P3): the *ratios* of the group rates, the noise
 level, the first-passage distribution, and — with two temperatures — the Arrhenius activation energy.
 
-The latent is pinned to stage units by fixing the ordinal thresholds at 2, 3, 4, 5. The absolute rate scale is
-confounded with the latent origin (the bottom stage is open below), so it is not asserted; the link scale is
-fixed and sharp because the simulator's labels are hard floors of the latent.
+The latent is pinned to stage units by fixing the ordinal thresholds at 2, 3, 4, 5, with the z0 prior in the same
+units (bottom stage, as for the grid filter). The link scale is fixed and sharp because the simulator's labels are
+hard floors of the latent. The latent SDE runs with the guided posterior and the predictive event term: without
+them its ELBO leaves a variational gap that shrinks as the clock speeds up, and every rate came out 8-32% too fast
+(docs/verifier_report.md, "Rate-recovery bias"; the exact likelihood peaks at the true rates).
 """
 
 import jax
@@ -16,6 +18,9 @@ from ripen.data import SyntheticConfig, collate, dataset_info, make_splits, sele
 from ripen.data.synthetic import analytic_spoilage_cdf
 from ripen.models import LatentDynamics
 from ripen.train import TrainConfig, train
+
+# guided posterior, predictive event term, z0 prior in stage units (bottom stage, as for the grid filter)
+GUIDED = {"posterior_guidance": True, "event_mean": "log_mean", "z0_prior_mean": 1.5, "z0_prior_std": 0.5}
 
 
 @pytest.mark.slow
@@ -47,6 +52,7 @@ def test_latent_sde_recovers_rates_sigma_and_fpt():
         n_train_samples=4,
         n_samples=128,
         init_sigma=0.4,
+        **GUIDED,
     )
     tcfg = TrainConfig(epochs=14, batch_size=32, lr=2e-2, patience=14, n_obs_mode="random", seed=0)
     model, hist = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
@@ -56,6 +62,8 @@ def test_latent_sde_recovers_rates_sigma_and_fpt():
     for g in ("T10", "Tamb"):
         ratio, true_ratio = rates[g] / rates["T20"], scfg.rates[g] / scfg.rates["T20"]
         assert abs(ratio - true_ratio) / true_ratio < 0.15, (g, ratio, true_ratio)
+    for g, true in scfg.rates.items():  # the absolute rates too (-2..+13% over 5 seeds)
+        assert abs(rates[g] - true) / true < 0.2, (g, rates[g], true)
     sigma = float(np.asarray(model.sigma(jnp.zeros(1)))[0])
     assert abs(sigma - scfg.sigma) / scfg.sigma < 0.5, sigma
 
@@ -65,9 +73,9 @@ def test_latent_sde_recovers_rates_sigma_and_fpt():
     truth = np.mean(
         [analytic_spoilage_cdf(t, it.meta["z0"], 0.473, scfg.calendar_sigma(0.473)) for it in fresh], axis=0
     )
-    # the amortised-posterior ELBO leaves a gap on the common rate factor (docs/verifier_report.md §3), which shifts
-    # the fresh-fruit forecast; the exact grid filter (ripen.models.fpt_filter) is held to 0.15 instead
-    assert np.max(np.abs(F - truth)) < 0.3, np.max(np.abs(F - truth))
+    # 0.09-0.18 over 5 seeds; a ~2-nat variational gap remains (the guidance looks one label ahead), so the bound is
+    # looser than the exact grid filter's 0.15
+    assert np.max(np.abs(F - truth)) < 0.25, np.max(np.abs(F - truth))
 
 
 @pytest.mark.slow
@@ -107,8 +115,10 @@ def test_arrhenius_clock_recovers_activation_energy():
         n_train_samples=4,
         n_samples=32,
         init_sigma=0.4,
+        **GUIDED,
     )
-    tcfg = TrainConfig(epochs=14, batch_size=32, lr=2e-2, patience=14, n_obs_mode="random", seed=0)
+    # E_a starts at 30 kJ/mol and moves in log space, ~0.5 to travel: 14 epochs (~56 steps) stopped it at 35-44
+    tcfg = TrainConfig(epochs=30, batch_size=32, lr=2e-2, patience=30, n_obs_mode="random", seed=0)
     model, _ = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
     ea_hat = float(model.clock.ea)
     assert abs(ea_hat - ea) / ea < 0.15, ea_hat  # E_a depends on the rate ratio only, which is identified

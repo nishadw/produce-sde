@@ -73,3 +73,36 @@ def test_latent_sde_gradient_methods_agree(method, synthetic_info, batch):
     # The continuous adjoint is an approximation whose error falls like 1/steps (see experiments/adjoint_tradeoffs.py);
     # with one step per day and a running-max spoilage term it lands near 1e-1 here. Checkpointing is exact.
     assert rel < (0.2 if method == "adjoint" else 1e-5)
+
+
+def test_posterior_guidance_points_at_the_next_label(synthetic_info):
+    """The guided posterior's h-transform pushes the progression coordinate up when the next label is a higher stage,
+    down when it is a lower one, vanishes with no labelled visit ahead, and leaves the loss and gradients finite."""
+    from ripen.models import LatentDynamics
+
+    m = LatentDynamics(
+        synthetic_info.feat_dim, len(synthetic_info.groups), horizon=24, t_max=synthetic_info.t_max,
+        key=jax.random.PRNGKey(0), latent_dim=1, use_images=False, drift_kind="linear", sigma_kind="const",
+        clock="group", fixed_thresholds=True, link_scale=0.1, learn_link_scale=False, posterior_guidance=True,
+    )  # fmt: skip
+    tv, vis = jnp.array([0.0, 1.0, 2.0]), jnp.array([True, True, False])
+    kappa, r = jnp.asarray(0.5), jnp.array([2.5])  # in stage 2
+    up = m.guidance(jnp.asarray(0.5), r, kappa, tv, vis, jnp.array([2, 4, 0]))[0]
+    down = m.guidance(jnp.asarray(0.5), r, kappa, tv, vis, jnp.array([2, 1, 0]))[0]
+    stay = m.guidance(jnp.asarray(0.5), r, kappa, tv, vis, jnp.array([2, 2, 0]))[0]
+    none = m.guidance(jnp.asarray(1.5), r, kappa, tv, vis, jnp.array([2, 2, 0]))[0]  # next visit hidden
+    assert float(up) > 0 > float(down) and abs(float(stay)) < abs(float(up)) and float(none) == 0.0
+
+
+def test_guided_loss_and_gradients_are_finite(synthetic_items, synthetic_info):
+    from ripen.models import LatentDynamics
+
+    m = LatentDynamics(
+        synthetic_info.feat_dim, len(synthetic_info.groups), horizon=24, t_max=synthetic_info.t_max,
+        key=jax.random.PRNGKey(0), latent_dim=1, use_images=False, clock="group", fixed_thresholds=True,
+        posterior_guidance=True, event_mean="log_mean",
+    )  # fmt: skip
+    b = collate(synthetic_items[:8], synthetic_info, n_obs="all")
+    loss, g = eqx.filter_value_and_grad(lambda mm: mm.loss(b, jax.random.PRNGKey(1)))(m)
+    leaves = jax.tree_util.tree_leaves(eqx.filter(g, eqx.is_inexact_array))
+    assert np.isfinite(float(loss)) and all(bool(jnp.all(jnp.isfinite(x))) for x in leaves)

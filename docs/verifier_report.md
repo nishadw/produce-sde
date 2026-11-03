@@ -92,3 +92,60 @@ Also found while running the real data end to end (not by the verifier): with mo
 clock was ~20× too fast, the density was entirely absorbed before an "alive" visit, and the backward pass
 produced NaN gradients. ✔ emission floor + collapse guard in the filter; ✔ `clock_kwargs.rate_ref: auto`
 initialises the clock from the median event time (`DatasetInfo.median_event_time`).
+
+
+---
+
+# Rate-recovery bias, revisited (2026-11-03)
+
+*Diagnosis run on the UMIACS cluster (SLURM CPU jobs; scripts and raw results in the project scratch space, not the
+repo). Overturns the explanation in §3 above.*
+
+**Symptom.** The two slow recovery tests failed on CI and on the cluster: the latent-SDE fresh-fruit CDF error
+0.325 > 0.3, and `E_a` 39.7 kJ/mol vs 50 (−21 %). Over 3 seeds of the test configuration the rates were
++8…+32 % too fast; the ratios within ±13 %.
+
+**What it is not** (each 3 seeds, test configuration otherwise):
+
+| Change | Rates vs truth | Verdict |
+|---|---|---|
+| z₀ prior pinned to the truth N(1.2, 0.15²) | +10…+32 % (q(z₀) correct, CDF error worse, 0.39–0.43) | not the origin confound of §3 |
+| 40 epochs | +10…+23 % | not under-training (for the rates) |
+| no event term (`spoil_weight=0`) | +8…+32 % | not the censoring likelihood |
+| Monte Carlo event likelihood | +15…+29 % | not the PDE |
+| time-varying posterior context (next/previous visit) | +13…+23 % | helps the ratios only |
+| posterior network 4× wider | +14…+74 % | worse: a better posterior fits a biased objective |
+
+**What it is.** Profile with the clock frozen at `f × truth`, the posterior retrained at each `f`, on the same
+training prefixes: the exact log-likelihood (grid filter) peaks at `f = 1.0` (−3.33 nats/item vs −5.86 at 1.35);
+the ELBO is 4.0 nats below it at `f = 1.0` and 1.8 at `f = 1.35`, so its maximum moves to `f ≈ 1.1–1.2`. The
+decomposition puts the slope in the stage-label term: the amortised posterior cannot learn the steep bridge that
+keeps paths inside each observed stage, and that miss is cheaper with a faster clock because the Girsanov KL of a
+fixed correction scales like `1/κ`. The `E_a` failure is separate: `log E_a` starts at log 30k and moves at most
+~0.02 per Adam step; 14 epochs (~56 steps) stops it at 35–44 kJ/mol.
+
+**Fix.**
+- `posterior_guidance=True`: the posterior drift gets the closed-form h-transform toward the next labelled visit,
+  `D ∂_r log P(stage_next | r_t)` with a Gaussian increment and the logistic link as Gaussian noise (a guided
+  proposal). The KL still prices it, so the ELBO stays a bound. Gap at `f = 1.0`: 4.0 → 1.9 nats.
+- `event_mean="log_mean"`: the forecast term is `log E_q P(event | r_now)` (the posterior sees only the prefix).
+- z₀ prior in stage units (N(1.5, 0.5²), as the grid filter uses); the `E_a` test trains 30 epochs.
+
+| Test configuration | Before (3 seeds) | After (5 seeds) |
+|---|---|---|
+| absolute rates | +8…+32 % | −2…+13 % |
+| rate ratios | ±13 % | ±7 % |
+| fresh-fruit CDF error | 0.17–0.32 | 0.09–0.18 |
+| `E_a` | −11…−21 % (14 epochs) | −10…+6 % (30 epochs) |
+| `σ` (true 0.25) | 0.29–0.31 | 0.32–0.36 |
+
+**Also fixed (correctness, no effect on these tests).** When the first spoiled visit is visible (whole sequences,
+`n_obs="all"`; training prefixes stop before it): (1) its stage-5 label was scored by the ordinal head as
+`r(t) > b`, but "spoiled" means the boundary was crossed *by* `t`, and a diffusion can cross and come back; it is
+now scored by the event term only. (2) That event term used `P(τ ≤ hi | r_lo)` from the survival table, ignoring
+the known `r_hi` and counting the crossing twice; it is now the bridge crossing probability given both ends.
+
+**Still open.** A ~2-nat gap remains (the guidance looks one label ahead), which keeps the rates a few percent fast
+and inflates `σ` by 30–45 %. The exact fix is the full h-transform from a backward filter on the PDE grid. The
+guided posterior is off by default (`configs/model/latent_sde.yaml` unchanged), so the reported avocado results
+are from the unguided model.
