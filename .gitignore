@@ -23,6 +23,7 @@ results/runs/
 results/logs/
 results/avocado_seeds/seed*/
 results/synthetic/run/
+results/synthetic_guided/run/
 outputs/
 multirun/
 *.eqx

@@ -29,6 +29,13 @@
   consistent with the known ~15-20% upward rate bias, E0). CI now gates on `-m "not slow"` + smoke (green on the
   cluster); slow tests run in a non-blocking `recovery` job. Tolerances not loosened.
 
+- 2026-11-03: rate-recovery bias diagnosed and fixed (docs/verifier_report.md "Rate-recovery bias, revisited").
+  ELBO gap shrinks with faster clock (KL ~ 1/kappa); exact likelihood peaks at truth. Fix: posterior_guidance +
+  event_mean=log_mean (+ stage-unit z0 prior in tests; Ea test 30 epochs). All 3 slow tests pass on the cluster and on
+  GitHub CI. Full-scale synthetic: rates +10/+5/+2% (was +24/+16/+14), sigma 0.256. Off by default; avocado unchanged.
+  Diagnostic scripts + raw results: /fs/class-projects/fall2026/cmsc498z/nwajge/scratch/recovery (not in git).
+
 ## Next
-- Fix the synthetic rate/Ea recovery bias so the slow tests pass reliably.
+- Rerun E1-E4 (avocado) with model.posterior_guidance=true model.event_mean=log_mean, if the user wants it.
+- Remaining ~2-nat gap: full h-transform via backward filtering on the PDE grid.
 - Exact-vs-MC gap (E2), C-MAPSS filter emission model, PBC2 time scale, post-hoc recalibration.

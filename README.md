@@ -42,6 +42,9 @@ full write-up with figures and every table is [`report/REPORT.md`](report/REPORT
 The SDE result is about calibration, robustness and transfer, not raw accuracy. In-distribution, ODE-RNN and
 GRU + gap are the most accurate (CRPS 0.83 ± 0.14 and 0.84 ± 0.03, vs 0.99 for the latent SDE).
 
+On synthetic data the latent SDE's clock rates used to come out 14–24 % too fast; a guided posterior fixes that
+(now +2–10 %, σ 0.256 vs 0.25), but it is not yet switched on for the real-data runs.
+
 Still open: the exact PDE likelihood loses to Monte Carlo on synthetic data and, over 5 seeds, on avocado too
 (CRPS 1.02 vs 0.92). The SDE models are near chance on PBC2, where the time scale is months rather than days.
 The FPT filter ignores the sensors on C-MAPSS. The non-avocado results are still single runs.

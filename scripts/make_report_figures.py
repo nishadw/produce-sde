@@ -277,6 +277,49 @@ def fig_pbc2_fix():
     plt.close(fig)
 
 
+def fig_synthetic_fix():
+    """E0: fitted rates and sigma, unguided vs guided posterior, against the simulator's truth."""
+    paths = {
+        k: ROOT / "results" / d / "recovery.json"
+        for k, d in (("unguided", "synthetic"), ("guided", "synthetic_guided"))
+    }
+    if not all(p.exists() for p in paths.values()):
+        return
+    rec = {k: json.loads(p.read_text()) for k, p in paths.items()}
+    groups = list(rec["unguided"]["rates_true"])
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10, 3.2), gridspec_kw={"width_ratios": [3, 1.2]})
+    ys = np.arange(len(groups))[::-1]
+    for lab, key, c, dy in (
+        ("unguided posterior (before)", "unguided", GRAY, 0.12),
+        ("guided posterior (after)", "guided", BLUE, -0.12),
+    ):
+        fit = [rec[key]["rates_fit"][g] / rec[key]["rates_true"][g] - 1 for g in groups]
+        ax.scatter(np.array(fit) * 100, ys + dy, s=60, color=c, zorder=3, label=lab, edgecolors="white", linewidths=1.2)
+        for y, v in zip(ys + dy, fit, strict=True):
+            ax.text(v * 100, y, f"  {v * 100:+.0f}%", va="center", fontsize=8, color=INK2)
+    ax.axvline(0, color=INK, lw=1)
+    ax.set_yticks(ys, [f"{g} (true {rec['guided']['rates_true'][g]:.3f}/day)" for g in groups])
+    ax.set_xlabel("fitted rate error vs truth (%)")
+    ax.set_xlim(-5, 32)
+    ax.grid(axis="y", visible=False)
+    ax.legend(loc="lower right", fontsize=8)
+    ax.set_title("Clock rates", loc="left")
+    sig = [rec["unguided"]["sigma_fit"], rec["guided"]["sigma_fit"]]
+    ax2.bar([0, 1], sig, color=[GRAY, BLUE], width=0.55)
+    ax2.axhline(rec["guided"]["sigma_true"], color=INK, lw=1, ls="--")
+    for x, v in enumerate(sig):
+        ax2.text(x, v, f"{v:.3f}", ha="center", va="bottom", fontsize=8, color=INK2)
+    ax2.set_xticks([0, 1], ["before", "after"])
+    ax2.set_ylim(0, 0.35)
+    ax2.grid(axis="x", visible=False)
+    ax2.set_title("σ (dashed: true 0.25)", loc="left")
+    fig.suptitle("E0 · Synthetic recovery, 600 fake fruit: the rate bias before and after the fix", x=0.01, ha="left",
+                 fontweight="bold")  # fmt: skip
+    fig.tight_layout()
+    fig.savefig(OUT / "synthetic_fix.png")
+    plt.close(fig)
+
+
 def copy_existing():
     for src, dst in [
         (SEEDS / "seed1" / "latent_sde_avocado" / "reliability_test.png", "latent_sde_reliability.png"),
@@ -295,6 +338,7 @@ def main():
     fig_sampling()
     fig_photo_count()
     fig_pbc2_fix()
+    fig_synthetic_fix()
     copy_existing()
     print("wrote", sorted(p.name for p in OUT.glob("*.png")))
 
