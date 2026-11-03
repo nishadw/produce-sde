@@ -1,4 +1,7 @@
-"""Figures for report/REPORT.md, read from results/runs/*/metrics_test.json (run after scripts/summarize.py).
+"""Figures for report/REPORT.md (run after scripts/summarize.py and scripts/summarize_seeds.py).
+
+Avocado figures (E1, E3, E4) show mean ± sample std over the independent seeds in
+results/avocado_seeds/seed*/<run>/, with one dot per seed; the rest read results/runs/*/metrics_test.json.
 
 python scripts/make_report_figures.py            # writes report/figures/*.png
 """
@@ -10,12 +13,14 @@ import shutil
 from pathlib import Path
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "results" / "runs"
+SEEDS = ROOT / "results" / "avocado_seeds"
 OUT = ROOT / "report" / "figures"
 BEFORE = ROOT / "report" / "before_fix"
 
@@ -69,6 +74,30 @@ def metrics(run: str, split: str = "overall", path: Path | None = None) -> dict 
     return json.loads(p.read_text()).get(split)
 
 
+def seed_vals(run: str, key: str, split: str = "overall") -> np.ndarray:
+    """One value per seed for an avocado run (NaN-free); falls back to the single results/runs value."""
+    paths = sorted(SEEDS.glob(f"seed*/{run}/metrics_test.json")) or [RUNS / run / "metrics_test.json"]
+    v = [json.loads(p.read_text()).get(split, {}).get(key, float("nan")) for p in paths if p.exists()]
+    return np.array([x for x in v if x == x], float)
+
+
+def mean_sd(v: np.ndarray) -> tuple[float, float]:
+    if len(v) == 0:
+        return float("nan"), 0.0
+    return float(v.mean()), float(v.std(ddof=1)) if len(v) > 1 else 0.0
+
+
+def seed_dots(ax, xs, vals_list, horizontal=False):
+    """Overlay one small dot per seed, jittered across the bar."""
+    rng = np.random.default_rng(0)
+    for x, v in zip(xs, vals_list, strict=True):
+        j = x + rng.uniform(-0.08, 0.08, len(v))
+        if horizontal:
+            ax.scatter(v, j, s=9, color=INK, alpha=0.55, zorder=3, linewidths=0)
+        else:
+            ax.scatter(j, v, s=9, color=INK, alpha=0.55, zorder=3, linewidths=0)
+
+
 def label_bars(ax, bars, fmt="{:.2f}", horizontal=True):
     for b in bars:
         v = b.get_width() if horizontal else b.get_height()
@@ -79,74 +108,106 @@ def label_bars(ax, bars, fmt="{:.2f}", horizontal=True):
 
 
 def fig_e1():
-    rows = [(m, metrics(f"{m}_avocado")) for m in MODELS]
-    rows = [(m, r) for m, r in rows if r]
+    rows = [(m, f"{m}_avocado") for m in MODELS if len(seed_vals(f"{m}_avocado", "mae"))]
     names = [NAMES[m] for m, _ in rows][::-1]
     colors = [BLUE if m in ("latent_sde", "fpt_filter") else GRAY for m, _ in rows][::-1]
-    fig, axes = plt.subplots(1, 3, figsize=(11, 4.2), sharey=True)
+    n_seeds = max(len(seed_vals(r, "mae")) for _, r in rows)
+    fig, axes = plt.subplots(1, 3, figsize=(11, 4.4), sharey=True)
     for ax, key, title, fmt in [
         (axes[0], "crps", "CRPS (days) ↓", "{:.2f}"),
         (axes[1], "coverage80", "80% coverage (dashed: target)", "{:.2f}"),
         (axes[2], "cindex", "C-index ↑", "{:.3f}"),
     ]:
-        vals = [r[key] for _, r in rows][::-1]
-        bars = ax.barh(names, vals, color=colors, height=0.6)
-        label_bars(ax, bars, fmt)
+        vals = [seed_vals(r, key) for _, r in rows][::-1]
+        ms = [mean_sd(v) for v in vals]
+        ys = np.arange(len(names))
+        ax.barh(ys, [m for m, _ in ms], xerr=[s for _, s in ms], color=colors, height=0.6,
+                error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})  # fmt: skip
+        seed_dots(ax, ys, vals, horizontal=True)
+        for y, (m, sd) in zip(ys, ms, strict=True):
+            ax.text(m + sd, y, " " + fmt.format(m), va="center", fontsize=8, color=INK2)
+        ax.set_yticks(ys, names)
         ax.set_title(title, loc="left")
         ax.grid(axis="y", visible=False)
         if key == "coverage80":
             ax.axvline(0.8, color=INK2, lw=1, ls="--")
-            ax.set_xlim(0, 1.1)
+            ax.set_xlim(0, 1.15)
         if key == "cindex":
             ax.set_xlim(0.5, 1.0)
-    fig.suptitle("E1 · Mendeley avocado test set (905 prediction instances)", x=0.01, ha="left", fontweight="bold")
+    fig.suptitle(f"E1 · Mendeley avocado test set · mean ± std over {n_seeds} seeds (dots: each seed)",
+                 x=0.01, ha="left", fontweight="bold")  # fmt: skip
     fig.tight_layout()
     fig.savefig(OUT / "e1_avocado.png")
     plt.close(fig)
 
 
+def _grouped_bars(ax, series, groups, w=0.26):
+    k = len(series)
+    for i, (lab, pat, c) in enumerate(series):
+        vals = [seed_vals(pat.format(g=g), "mae") for g in groups]
+        ms = [mean_sd(v) for v in vals]
+        xs = [j + (i - (k - 1) / 2) * (w + 0.02) for j in range(len(groups))]
+        ax.bar(xs, [m for m, _ in ms], w, yerr=[s for _, s in ms], color=c, label=lab,
+               error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})  # fmt: skip
+        seed_dots(ax, xs, vals)
+        for x, (m, sd) in zip(xs, ms, strict=True):
+            ax.text(x, m + sd, f"{m:.1f}", ha="center", va="bottom", fontsize=8, color=INK2)
+    ax.set_xticks(range(len(groups)), [f"held out: {g}" for g in groups])
+    ax.set_ylabel("MAE on held-out group (days)")
+    ax.grid(axis="x", visible=False)
+    ax.set_ylim(0, ax.get_ylim()[1] * 1.18)
+    ax.legend(loc="upper center", ncol=len(series), bbox_to_anchor=(0.5, 1.0), fontsize=8.5)
+
+
 def fig_transfer():
     groups = ["T10", "T20", "Tamb"]
-    series = [
+    fig, ax = plt.subplots(figsize=(7.5, 3.9))
+    _grouped_bars(ax, [
         ("Arrhenius clock (temperature)", "latent_sde_avocado_logo_{g}", BLUE),
         ("per-group clock", "latent_sde_avocado_logo_{g}_clock_group", ORANGE),
         ("fixed clock", "latent_sde_avocado_logo_{g}_clock_fixed", AQUA),
-    ]
-    fig, ax = plt.subplots(figsize=(7.5, 3.8))
-    w = 0.26
-    for i, (lab, pat, c) in enumerate(series):
-        vals = [(metrics(pat.format(g=g)) or {}).get("mae", float("nan")) for g in groups]
-        bars = ax.bar([j + (i - 1) * (w + 0.02) for j in range(3)], vals, w, color=c, label=lab)
-        label_bars(ax, bars, "{:.1f}", horizontal=False)
-    ax.set_xticks(range(3), [f"held out: {g}" for g in groups])
-    ax.set_ylabel("MAE on held-out group (days)")
-    ax.grid(axis="x", visible=False)
-    ax.legend(loc="upper right")
-    ax.set_title("E3 · Transfer to an unseen storage temperature (latent SDE)", loc="left")
+    ], groups)  # fmt: skip
+    ax.set_title("E3 · Clock ablation, latent SDE (mean ± std, 5 seeds)", loc="left")
     fig.tight_layout()
     fig.savefig(OUT / "e3_transfer.png")
+    plt.close(fig)
+
+    # same held-out groups, our two models vs the black-box baselines (gray = baselines)
+    fig, ax = plt.subplots(figsize=(7.5, 3.9))
+    _grouped_bars(ax, [
+        ("latent SDE (ours)", "latent_sde_avocado_logo_{g}", BLUE),
+        ("FPT filter (ours)", "fpt_filter_avocado_logo_{g}", "#174f91"),
+        ("GRU-D", "gru_d_avocado_logo_{g}", GRAY),
+        ("direct regressor", "direct_reg_avocado_logo_{g}", "#dcdad3"),
+    ], groups, w=0.2)  # fmt: skip
+    ax.set_title("E3 · Ours vs black-box baselines (mean ± std, 5 seeds)", loc="left")
+    fig.tight_layout()
+    fig.savefig(OUT / "e3_vs_baselines.png")
     plt.close(fig)
 
 
 def fig_sampling():
     series = [("GRU-D", "gru_d", GRAY), ("latent ODE", "latent_ode", ORANGE), ("latent SDE (ours)", "latent_sde", BLUE)]
     xs = ["daily", "every 2nd day", "every 3rd day"]
-    fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 3.8))
     for ax, key, title in [(axes[0], "crps", "CRPS (days) ↓"), (axes[1], "coverage80", "80% coverage")]:
         for lab, m, c in series:
             runs = [f"{m}_avocado", f"{m}_avocado_every2", f"{m}_avocado_every3"]
-            vals = [(metrics(r) or {}).get(key, float("nan")) for r in runs]
-            ax.plot(xs, vals, color=c, lw=2, marker="o", ms=7, mec="white", mew=1.5, label=lab)
-            ax.annotate(
-                lab, (2, vals[-1]), xytext=(6, 0), textcoords="offset points", va="center", fontsize=8, color=INK2
-            )
+            ms = [mean_sd(seed_vals(r, key)) for r in runs]
+            mu, sd = np.array([a for a, _ in ms]), np.array([b for _, b in ms])
+            ax.fill_between(range(3), mu - sd, mu + sd, color=c, alpha=0.15, linewidth=0)
+            ax.plot(range(3), mu, color=c, lw=2, marker="o", ms=7, mec="white", mew=1.5, label=lab)
+            ax.annotate(lab, (2, mu[-1]), xytext=(6, 0), textcoords="offset points", va="center", fontsize=8,
+                        color=INK2)  # fmt: skip
+        ax.set_xticks(range(3), xs)
         ax.set_title(title, loc="left")
         ax.grid(axis="x", visible=False)
         ax.set_xlim(-0.2, 2.9)
         if key == "coverage80":
             ax.axhline(0.8, color=INK2, lw=1, ls="--")
     axes[0].legend(loc="upper left")
-    fig.suptitle("E4 · Training on sparser photo schedules", x=0.01, ha="left", fontweight="bold")
+    fig.suptitle("E4 · Training on sparser photo schedules (mean, band = ± std over 5 seeds)", x=0.01, ha="left",
+                 fontweight="bold")  # fmt: skip
     fig.tight_layout()
     fig.savefig(OUT / "e4_sampling.png")
     plt.close(fig)
@@ -156,16 +217,22 @@ def fig_photo_count():
     series = [("GRU-D", "gru_d", GRAY), ("latent ODE", "latent_ode", ORANGE), ("latent SDE (ours)", "latent_sde", BLUE)]
     fig, ax = plt.subplots(figsize=(7.5, 3.6))
     for lab, m, c in series:
-        p = RUNS / f"{m}_avocado" / "metrics_by_n_obs.json"
-        if not p.exists():
+        paths = sorted(SEEDS.glob(f"seed*/{m}_avocado/metrics_by_n_obs.json")) or [
+            RUNS / f"{m}_avocado" / "metrics_by_n_obs.json"
+        ]
+        ds = [json.loads(p.read_text()) for p in paths if p.exists()]
+        if not ds:
             continue
-        d = json.loads(p.read_text())
-        ks = sorted(int(k) for k in d if k.isdigit() and d[k]["n"] >= 20)[:12]
-        ax.plot(ks, [d[str(k)]["crps"] for k in ks], color=c, lw=2, marker="o", ms=6, mec="white", mew=1.2, label=lab)
+        ks = sorted(int(k) for k in ds[0] if k.isdigit() and ds[0][k]["n"] >= 20)[:12]
+        mu = np.array([np.mean([d[str(k)]["crps"] for d in ds if str(k) in d]) for k in ks])
+        per_k = [[d[str(k)]["crps"] for d in ds if str(k) in d] for k in ks]
+        sd = np.array([np.std(v, ddof=1) if len(v) > 1 else 0.0 for v in per_k])
+        ax.fill_between(ks, mu - sd, mu + sd, color=c, alpha=0.15, linewidth=0)
+        ax.plot(ks, mu, color=c, lw=2, marker="o", ms=6, mec="white", mew=1.2, label=lab)
     ax.set_xlabel("photos seen so far")
     ax.set_ylabel("CRPS (days) ↓")
     ax.legend()
-    ax.set_title("E4 · Forecast error vs. number of photos observed", loc="left")
+    ax.set_title("E4 · Forecast error vs. number of photos observed (mean ± std, 5 seeds)", loc="left")
     fig.tight_layout()
     fig.savefig(OUT / "e4_photo_count.png")
     plt.close(fig)
@@ -212,8 +279,8 @@ def fig_pbc2_fix():
 
 def copy_existing():
     for src, dst in [
-        (RUNS / "latent_sde_avocado" / "reliability_test.png", "latent_sde_reliability.png"),
-        (RUNS / "latent_sde_avocado" / "pred_vs_true_test.png", "latent_sde_pred_vs_true.png"),
+        (SEEDS / "seed1" / "latent_sde_avocado" / "reliability_test.png", "latent_sde_reliability.png"),
+        (SEEDS / "seed1" / "latent_sde_avocado" / "pred_vs_true_test.png", "latent_sde_pred_vs_true.png"),
         (ROOT / "results" / "synthetic" / "recovery.png", "synthetic_recovery.png"),
     ]:
         if src.exists():

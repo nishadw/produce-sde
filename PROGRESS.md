@@ -19,6 +19,9 @@
   observations. Val loss was still falling at epoch 60 (not converged). Next: check how C-MAPSS sensors enter
   the filter's emission model and train longer.
 
+- 2026-11-03: README + report/REPORT.md updated to 5-seed mean ± std (E1-E4); figures regenerated with error
+  bars + per-seed dots (new e3_vs_baselines.png). Claims revised: GRU-D matches the SDE on T20/ambient (seed-0 GRU-D
+  was a bad draw, configs identical, no NaN); MC beats the exact PDE likelihood on avocado too; ODE-RNN ties GRU+gap.
+
 ## Next
-- When seeds finish: update README/report numbers with error bars; frame the SDE result as calibration +
-  temperature transfer, not accuracy (ODE-RNN wins in-distribution in the seed-0 run).
+- Exact-vs-MC gap (E2), C-MAPSS filter emission model, PBC2 time scale, post-hoc recalibration.

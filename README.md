@@ -1,6 +1,6 @@
 # Neural SDE First-Passage Models
 
-[![tests](https://github.com/nishadw/neural-sde-first-passage/actions/workflows/tests.yml/badge.svg)](https://github.com/nishadw/neural-sde-first-passage/actions/workflows/tests.yml)
+[![tests](https://github.com/nishadw/produce-sde/actions/workflows/tests.yml/badge.svg)](https://github.com/nishadw/produce-sde/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.10%2B-1F2328)
 ![jax](https://img.shields.io/badge/JAX-Diffrax%20%7C%20Equinox-C8102E)
 [![license](https://img.shields.io/badge/license-MIT-6B7280)](LICENSE)
@@ -29,18 +29,22 @@ of the censored log score, identifiability of the clock) are in [`docs/theory.md
 
 ## Results
 
-From a single training run on the UMIACS GPU cluster. The full write-up with figures is
-[`report/REPORT.md`](report/REPORT.md).
+Avocado numbers are mean ± std over **5 independent training seeds** on the UMIACS GPU cluster (fixed split). The
+full write-up with figures and every table is [`report/REPORT.md`](report/REPORT.md).
 
 | | Result |
 |---|---|
-| **Transfer to an unseen storage temperature** | The Arrhenius clock cuts MAE **1.7–2.9×** versus ablated clocks and beats every black-box baseline (0.9 / 1.7 / 4.7 days on T20 / ambient / T10) |
-| **SDE vs ODE calibration** | Same ranking (C ≈ 0.93), but 80% intervals cover **93%** for the SDE vs 63% for the deterministic latent ODE: the diffusion term buys calibration |
-| **Sparse observations** | With a photo every 3rd day the latent SDE has the best CRPS (0.81 vs 2.10 for GRU-D) and keeps 0.96 coverage |
-| **vs the published baseline** | Every distributional model beats classify-then-regress (CRPS 1.82 → 0.69–1.05) |
+| **Transfer to an unseen storage temperature** | The Arrhenius clock beats both ablated clocks in all 15 seed × held-out-group pairs, cutting MAE **1.6–2.4×** (1.0 / 1.6 / 5.1 days on T20 / ambient / T10). On cold-storage extrapolation (T10) our models beat every black-box baseline (4.9–5.1 vs 6.1–7.1 days); on T20 and ambient GRU-D is as good when it doesn't fail, but it is far less stable across seeds (ambient 1.8 ± 1.9) |
+| **SDE vs ODE calibration** | Same ranking (C ≈ 0.93), but 80% intervals cover **94 ± 2%** for the SDE vs **64 ± 4%** for the deterministic latent ODE: the diffusion term fixes the ODE's over-confidence |
+| **Sparse observations** | With a photo every 3rd day the latent SDE has the best CRPS (0.99 ± 0.04 vs 1.98 ± 0.34 for GRU-D), no worse than on daily photos |
+| **vs the published baseline** | Every distributional model beats classify-then-regress (CRPS 1.81 → 0.83–1.08) |
 
-Still open: the SDE models are near chance on PBC2, where the time scale is months rather than days. The
-exact likelihood loses to Monte Carlo on synthetic data. And every number comes from a single seed.
+The SDE result is about calibration, robustness and transfer, not raw accuracy. In-distribution, ODE-RNN and
+GRU + gap are the most accurate (CRPS 0.83 ± 0.14 and 0.84 ± 0.03, vs 0.99 for the latent SDE).
+
+Still open: the exact PDE likelihood loses to Monte Carlo on synthetic data and, over 5 seeds, on avocado too
+(CRPS 1.02 vs 0.92). The SDE models are near chance on PBC2, where the time scale is months rather than days.
+The FPT filter ignores the sensors on C-MAPSS. The non-avocado results are still single runs.
 
 ## SDE foundations (`src/nsde`)
 
