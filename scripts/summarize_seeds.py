@@ -1,10 +1,12 @@
 """Mean ± std over seeds for the independent avocado rerun (results/avocado_seeds/seed*/<run>/metrics_test.json).
 
 python scripts/summarize_seeds.py            # writes results/avocado_seeds/summary.md
+python scripts/summarize_seeds.py --root results/avocado_round2 --recal   # recalibrated metrics -> summary_recal.md
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -12,6 +14,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path("results/avocado_seeds")
+METRICS = "metrics_test.json"
 COLS = [("mae", "MAE (d)"), ("crps", "CRPS"), ("coverage80", "80% cov."), ("width80", "80% width"),
         ("cindex", "C-index"), ("ece", "ECE")]  # fmt: skip
 LOGO_MODELS = ["direct_reg", "gru_d", "fpt_filter", "latent_sde", "latent_sde+clock_group", "latent_sde+clock_fixed"]
@@ -20,7 +23,7 @@ LOGO_MODELS = ["direct_reg", "gru_d", "fpt_filter", "latent_sde", "latent_sde+cl
 def load() -> dict[str, list[dict]]:
     """run name -> list of per-seed metrics_test.json dicts."""
     runs: dict[str, list[dict]] = defaultdict(list)
-    for p in sorted(ROOT.glob("seed*/*/metrics_test.json")):
+    for p in sorted(ROOT.glob(f"seed*/*/{METRICS}")):
         runs[p.parent.name].append(json.loads(p.read_text()))
     return runs
 
@@ -38,10 +41,16 @@ def logo_run(model: str, g: str) -> str:
 
 
 def main() -> None:
+    global ROOT, METRICS
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--root", default=str(ROOT))
+    ap.add_argument("--recal", action="store_true", help="read metrics_test_recal.json (scripts/recalibrate.py)")
+    a = ap.parse_args()
+    ROOT, METRICS = Path(a.root), ("metrics_test_recal.json" if a.recal else "metrics_test.json")
     runs = load()
-    seeds = sorted({p.parent.parent.name for p in ROOT.glob("seed*/*/metrics_test.json")})
+    seeds = sorted({p.parent.parent.name for p in ROOT.glob(f"seed*/*/{METRICS}")})
     lines = [
-        "# Avocado, independent multi-seed rerun",
+        f"# Avocado multi-seed results: `{ROOT}`" + (" (post-hoc recalibrated on val)" if a.recal else ""),
         "",
         f"Seeds: {', '.join(seeds) or 'none yet'}. Cells are mean ± sample std over seeds; the split is fixed "
         "(same test items for every seed), so the spread is training variance only. Test split, every unspoiled "
@@ -78,7 +87,7 @@ def main() -> None:
         lines.append(f"| {g} | " + " | ".join(cells) + " |")
 
     ROOT.mkdir(parents=True, exist_ok=True)
-    (ROOT / "summary.md").write_text("\n".join(lines) + "\n")
+    (ROOT / ("summary_recal.md" if a.recal else "summary.md")).write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
 

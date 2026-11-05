@@ -26,6 +26,12 @@
 #   e6         A2SL multimodal avocados (photos + microwave)         results/runs/<model>_a2sl
 #   summary    results/summary.md
 #   seeds      independent multi-seed rerun of e1-e4 (avocado only)  results/avocado_seeds/, summary.md there
+#   Round 2 (docs/round2_plan.md):
+#   features2  DINOv2 ViT-B/14 feature cache + linear probe vs ResNet-18  data/features/, results/feature_probe.md
+#   r2-pilot   one seed of the round-2 latent SDE and GRU-D (catch errors before r2)  results/avocado_round2_pilot/
+#   r2         e1-e4 again, 5 seeds: DINOv2 features for every model, guided posterior for the latent SDE,
+#              plus the latent-SDE ablations (guidance alone, features alone)   results/avocado_round2/
+#   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck disable=SC1091
@@ -162,6 +168,56 @@ stage_seeds() {
   fi
 }
 
+# Round 2: same runs as `seeds`, with the DINOv2 cache for every model and the guided posterior for the latent SDE.
+R2_FEATS=data/features/avocado_dinov2_vitb14.npz
+R2_GUIDE="model.posterior_guidance=true model.event_mean=log_mean"
+r2_args() {  # r2_args "<seeds-style args>" -> round-2 args
+  local a="$1 data.features_file=$R2_FEATS"
+  [[ "$1" == "model=latent_sde"* ]] && a="$a $R2_GUIDE"
+  echo "$a"
+}
+R2_RUNS=()
+for args in "${AVOCADO_RUNS[@]}"; do R2_RUNS+=("$(r2_args "$args")"); done
+# ablations, latent SDE only: guidance alone (ResNet-18) and DINOv2 alone (unguided), in-distribution + LOGO
+R2_RUNS+=("model=latent_sde $R2_GUIDE run_name=latent_sde_avocado_guided_r18"
+  "model=latent_sde data.features_file=$R2_FEATS run_name=latent_sde_avocado_dino_unguided")
+for g in T10 T20 Tamb; do
+  R2_RUNS+=("model=latent_sde +experiment=logo splits.held_out=$g $R2_GUIDE run_name=latent_sde_avocado_logo_${g}_guided_r18"
+    "model=latent_sde +experiment=logo splits.held_out=$g data.features_file=$R2_FEATS run_name=latent_sde_avocado_logo_${g}_dino_unguided")
+done
+
+# seed_jobs TAG ROOT run-args... : one job per run looping over RIPEN_SEEDS, then a summary job (afterany)
+seed_jobs() {
+  local tag="$1" root="$2"; shift 2
+  local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
+  for args in "$@"; do
+    local cmd="fail=0; for s in $seeds; do $PY scripts/train.py data=avocado $args seed=\$s +train.seed=\$s 'out_dir=$root/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
+    JOBS[${tag}_$i]=$(submit "$tag-$i" "$cmd"); [[ "${JOBS[${tag}_$i]}" != local ]] && deps+=("${JOBS[${tag}_$i]}"); i=$((i + 1))
+  done
+  local post="$PY scripts/recalibrate.py $root && $PY scripts/summarize_seeds.py --root $root && $PY scripts/summarize_seeds.py --root $root --recal"
+  if [[ $LOCAL -eq 1 ]]; then bash -c "$post"; else
+    local dep=""; [[ ${#deps[@]} -gt 0 ]] && dep="--dependency=afterany:$(IFS=:; echo "${deps[*]}")"
+    JOBS[${tag}_summary]=$(sbatch --parsable --job-name="ripen-$tag-summary" --output="results/logs/%x-%j.out" --time=00:30:00 \
+      --cpus-per-task=1 --mem=4G --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" $dep \
+      --wrap="cd '$RIPEN_ROOT' && source '$RIPEN_ENV/bin/activate' && $post")
+  fi
+}
+
+stage_features2() {
+  local dev; dev='$( [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && echo cuda || echo cpu )'
+  JOBS[features2]=$(submit features2 "[[ -f $R2_FEATS ]] || $PY scripts/extract_features.py --data avocado --root data/avocado --backbone dinov2_vitb14 --standardize --out $R2_FEATS --device $dev; $PY scripts/probe_features.py data/features/avocado_resnet18.npz $R2_FEATS")
+}
+
+stage_r2_pilot() {
+  RIPEN_SEEDS=1 seed_jobs r2pilot results/avocado_round2_pilot "$(r2_args model=latent_sde)" "$(r2_args model=gru_d)"
+}
+
+stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
+
+stage_recal() {
+  JOBS[recal]=$(submit recal "$PY scripts/recalibrate.py results/avocado_seeds && $PY scripts/summarize_seeds.py --recal")
+}
+
 stage_summary() {
   local deps=(); for j in "${JOBS[@]}"; do [[ "$j" != local ]] && deps+=("$j"); done
   JOBS[summary]=$(submit summary "$PY scripts/summarize.py" "${deps[@]}")
@@ -184,6 +240,10 @@ case "$STAGE" in
   summary) stage_summary ;;
   seeds) stage_seeds ;;
   seeds-summary) "$PY" scripts/summarize_seeds.py ;;
+  features2) stage_features2 ;;
+  r2-pilot) stage_r2_pilot ;;
+  r2) stage_r2 ;;
+  recal) stage_recal ;;
   all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e5; stage_e6; stage_summary ;;
   *) die "unknown stage $STAGE" ;;
 esac

@@ -35,6 +35,14 @@
   GitHub CI. Full-scale synthetic: rates +10/+5/+2% (was +24/+16/+14), sigma 0.256. Off by default; avocado unchanged.
   Diagnostic scripts + raw results: /fs/class-projects/fall2026/cmsc498z/nwajge/scratch/recovery (not in git).
 
+## 2026-11-04: Round 2 started (docs/round2_plan.md)
+- New: DINOv2 backbone (`--backbone dinov2_vitb14 --standardize`), `scripts/probe_features.py`, post-hoc PIT
+  recalibration (`src/ripen/eval/recalibrate.py`, `scripts/recalibrate.py`), stages features2 / r2-pilot / r2 / recal.
+- Found: integer-day quantiles make a perfect forecaster score cov80 0.85-0.88, not 0.80 (see plan note).
+- Submitted: features2 8166759 (extract + probe), recal 8166760 (Round 1 recalibrated -> results/avocado_seeds/summary_recal.md),
+  r2-pilot 8166761/8166766 + summary 8166767 (after features2) -> results/avocado_round2_pilot/.
+- Next: read results/feature_probe.md (gate: DINOv2 >= ResNet-18) and the pilot; then `bash run_umiacs.sh r2`.
+
 ## Next
 - Rerun E1-E4 (avocado) with model.posterior_guidance=true model.event_mean=log_mean, if the user wants it.
 - Remaining ~2-nat gap: full h-transform via backward filtering on the PDE grid.
