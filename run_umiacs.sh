@@ -28,6 +28,8 @@
 #   Round 2 (docs/round2_plan.md):
 #   r2         guided-posterior latent SDE (ResNet-18 features), 5 seeds: in-distribution + 3 held-out groups
 #              results/avocado_round2/
+#   r2b        the rest for the guided model: labels-only, MC likelihood, clock ablation, sparse photos, and
+#              A2SL (guided latent SDE, GRU-D, FPT filter)   results/avocado_round2/
 #   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -144,7 +146,8 @@ for k in 2 3; do for m in gru_d latent_ode latent_sde; do AVOCADO_RUNS+=("model=
 stage_seeds() {
   local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
   for args in "${AVOCADO_RUNS[@]}"; do
-    local cmd="fail=0; for s in $seeds; do $PY scripts/train.py data=avocado $args seed=\$s +train.seed=\$s 'out_dir=results/avocado_seeds/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
+    local data="data=avocado"; [[ " $args " == *" data="* ]] && data=""
+    local cmd="fail=0; for s in $seeds; do $PY scripts/train.py $data $args seed=\$s +train.seed=\$s 'out_dir=results/avocado_seeds/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
     JOBS[seeds_$i]=$(submit "seeds-$i" "$cmd"); [[ "${JOBS[seeds_$i]}" != local ]] && deps+=("${JOBS[seeds_$i]}"); i=$((i + 1))
   done
   # afterany: one failed seed should not block the table for the rest
@@ -162,13 +165,24 @@ R2_RUNS=("model=latent_sde $R2_GUIDE run_name=latent_sde_avocado_guided_r18")
 for g in T10 T20 Tamb; do
   R2_RUNS+=("model=latent_sde +experiment=logo splits.held_out=$g $R2_GUIDE run_name=latent_sde_avocado_logo_${g}_guided_r18")
 done
+# Round 2b: the rest of E2-E4 and E6 for the main model (guided, ResNet-18), same root, same seeds
+R2B_RUNS=("model=latent_sde $R2_GUIDE +experiment=labels_only run_name=latent_sde_avocado_labels_only_guided_r18"
+  "model=latent_sde $R2_GUIDE model.event_likelihood=mc run_name=latent_sde_avocado_mc_guided_r18")
+for g in T10 T20 Tamb; do for c in group fixed; do
+  R2B_RUNS+=("model=latent_sde $R2_GUIDE +experiment=logo splits.held_out=$g model.clock=$c run_name=latent_sde_avocado_logo_${g}_clock_${c}_guided_r18")
+done; done
+for k in 2 3; do R2B_RUNS+=("model=latent_sde $R2_GUIDE +experiment=sampling_every$k run_name=latent_sde_avocado_every${k}_guided_r18"); done
+A2SL_ARGS="data=a2sl horizon=20 train.batch_size=8"
+R2B_RUNS+=("model=latent_sde $A2SL_ARGS $R2_GUIDE run_name=latent_sde_a2sl_guided_r18"
+  "model=gru_d $A2SL_ARGS" "model=fpt_filter $A2SL_ARGS")
 
 # seed_jobs TAG ROOT run-args... : one job per run looping over RIPEN_SEEDS, then a summary job (afterany)
 seed_jobs() {
   local tag="$1" root="$2"; shift 2
   local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
   for args in "$@"; do
-    local cmd="fail=0; for s in $seeds; do $PY scripts/train.py data=avocado $args seed=\$s +train.seed=\$s 'out_dir=$root/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
+    local data="data=avocado"; [[ " $args " == *" data="* ]] && data=""
+    local cmd="fail=0; for s in $seeds; do $PY scripts/train.py $data $args seed=\$s +train.seed=\$s 'out_dir=$root/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
     JOBS[${tag}_$i]=$(submit "$tag-$i" "$cmd"); [[ "${JOBS[${tag}_$i]}" != local ]] && deps+=("${JOBS[${tag}_$i]}"); i=$((i + 1))
   done
   local post="$PY scripts/recalibrate.py $root && $PY scripts/summarize_seeds.py --root $root && $PY scripts/summarize_seeds.py --root $root --recal"
@@ -181,6 +195,7 @@ seed_jobs() {
 }
 
 stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
+stage_r2b() { seed_jobs r2b results/avocado_round2 "${R2B_RUNS[@]}"; }
 
 stage_recal() {
   JOBS[recal]=$(submit recal "$PY scripts/recalibrate.py results/avocado_seeds && $PY scripts/summarize_seeds.py --recal")
@@ -208,6 +223,7 @@ case "$STAGE" in
   seeds) stage_seeds ;;
   seeds-summary) "$PY" scripts/summarize_seeds.py ;;
   r2) stage_r2 ;;
+  r2b) stage_r2b ;;
   recal) stage_recal ;;
   all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e6; stage_summary ;;
   *) die "unknown stage $STAGE" ;;

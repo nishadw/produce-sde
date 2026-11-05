@@ -18,6 +18,11 @@ Current state as of 2026-11-05. The day-by-day log up to this point is in git hi
 - **Removed on 2026-11-05:** PBC2, C-MAPSS and DINOv2, plus the old `slurm/` scripts (replaced by `run_umiacs.sh`).
   - Their data and runs are archived in `/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/archive_removed_2026-11-05`.
 
+## In progress (2026-11-05, started by the go-ahead)
+- Step 1 submitted: `bash run_umiacs.sh r2b` -> jobs 8176371-8176383 (13 runs x 5 seeds) + summary 8176384
+  -> results/avocado_round2/. Check: `sacct -u $USER -S today -X | grep r2b`.
+- Next: code wiener / gamma / landmark Cox / Neural CDE / transformer baselines, pilot, then submit them (stage `nb`).
+
 ## Next steps, in order
 1. **Finish Round 2 for the main model** (about 12 five-seed jobs, roughly half a day on 4 GPUs). Every number in the doc
    should come from one model version:
