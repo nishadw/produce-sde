@@ -11,6 +11,8 @@ Seeds: seed1. Cells are mean ± sample std over seeds; the split is fixed (same 
 | sweep_cde_h64 | 1 | 1.467 | 1.066 | 0.843 | 4.762 | 0.902 | 0.020 |
 | sweep_gamma_process | 1 | 2.069 | 1.599 | 0.957 | 10.703 | 0.860 | 0.078 |
 | sweep_landmark_cox | 1 | 4.144 | 2.771 | 0.993 | 17.914 | 0.751 | 0.128 |
+| sweep_landmark_cox_lr1e-2 | 1 | 2.413 | 1.748 | 0.915 | 8.780 | 0.864 | 0.078 |
+| sweep_landmark_cox_lr3e-2 | 1 | 2.251 | 1.648 | 0.922 | 8.391 | 0.866 | 0.065 |
 | sweep_tf_d32_l1 | 1 | 0.922 | 0.705 | 0.959 | 4.454 | 0.949 | 0.019 |
 | sweep_tf_d64_l2 | 1 | 0.964 | 0.693 | 0.934 | 3.654 | 0.947 | 0.013 |
 | sweep_tf_d64_l2_lr3e-4 | 1 | 1.035 | 0.785 | 0.941 | 4.607 | 0.947 | 0.014 |
