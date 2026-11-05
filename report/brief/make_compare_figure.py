@@ -18,7 +18,12 @@ models = [  # label, root, run, recal?, ours?
     ("ODE-RNN (standard AI model)", "avocado_seeds", "ode_rnn_avocado", True, False),
     ("GRU + time gap (standard AI model)", "avocado_seeds", "gru_gap_avocado", True, False),
     ("GRU-D (standard AI model)", "avocado_seeds", "gru_d_avocado", True, False),
+    ("Transformer (attention-based AI model)", "baselines2", "transformer_avocado", True, False),
+    ("Neural CDE (continuous-time AI model)", "baselines2", "neural_cde_avocado", True, False),
     ("Our model without randomness", "avocado_seeds", "latent_ode_avocado", True, False),
+    ("Wiener process (classic statistics model)", "baselines2", "wiener_avocado", True, False),
+    ("Gamma process (classic statistics model)", "baselines2", "gamma_process_avocado", True, False),
+    ("Landmark Cox (classic survival model)", "baselines2", "landmark_cox_avocado", True, False),
     (
         "Published method\n(classify ripeness, then estimate days)",
         "avocado_seeds",
@@ -38,7 +43,7 @@ plt.rcParams.update(
         "axes.axisbelow": True,
     }
 )
-fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.5), sharey=True, gridspec_kw={"width_ratios": [1, 1]})
+fig, axes = plt.subplots(1, 2, figsize=(8.4, 5.0), sharey=True, gridspec_kw={"width_ratios": [1, 1]})
 ys = np.arange(len(models))
 for ax, key, title, scale, fmt in [
     (axes[0], "mae", "Average error (days)", 1, "{:.2f}"),
@@ -57,7 +62,7 @@ for ax, key, title, scale, fmt in [
         ax.axvspan(80, 90, color="#1baf7a", alpha=0.12, lw=0)
         ax.set_xlim(0, 112)
     else:
-        ax.set_xlim(0, 2.25)
+        ax.set_xlim(0, max(a + s for a, s in zip(m, sd)) * 1.18)
 axes[0].set_yticks(ys, [l for l, *_ in models])
 fig.tight_layout()
 fig.savefig(Path(__file__).resolve().parent / "compare.png", dpi=200)
