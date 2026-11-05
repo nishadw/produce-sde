@@ -7,6 +7,7 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 HERE = "/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/brief/"
+CMP = HERE + "plain_compare.png"
 FIG, OUT = HERE + "plain_transfer.png", HERE + "Produce_Spoilage_SDE_Results.docx"
 GREY = RGBColor(0x55, 0x5B, 0x65)
 
@@ -66,7 +67,7 @@ para("How it works: the model keeps a hidden “ripeness score” for each fruit
 
 doc.add_heading("Main findings", level=1)
 for lead, txt in [
-    ("Accurate: ", "on average the prediction is 1.2 days off, and the true spoilage day lands inside the model's “80 % likely” range 93 % of the time. That matches the best standard AI models we compared against."),
+    ("Accurate: ", "on average the prediction is 1.2 days off, and the true spoilage day lands inside the model's “80 % likely” range 93 % of the time. That is about as good as the best standard AI models we compared against (chart below)."),
     ("Works at new temperatures: ", "when trained on two storage temperatures and tested on a third it never saw, the temperature rule cuts the error by 1.5 to 2.4 times (figure below)."),
     ("Needs fewer photos: ", "with a photo only every third day its accuracy barely changes, while the best standard model's error roughly doubles."),
     ("Weak spot: ", "for fruit stored colder than anything it trained on, it is about 5 days off and too confident in its range."),
@@ -78,6 +79,8 @@ rows = [
     ("Average error", "How many days off the prediction is, on average. Lower is better.", "1.2 days", "1.0 days"),
     ("Range hit rate", "How often the real spoilage day falls inside the model's “80 % likely” range. About 80–90 % means the ranges are honest.", "93 %", "89 %"),
     ("Ordering accuracy", "Given two fruits, how often the model correctly says which spoils first. 50 % is a coin flip; 100 % is perfect.", "93 %", "78 %"),
+    ("Range width", "How wide the \u201c80 % likely\u201d range is. Narrower is more useful, as long as the hit rate stays high.", "4.3 days", "5.4 days"),
+    ("Overall forecast score (CRPS)", "One number that scores the whole range of predictions at once, in days. It rewards being right and being confident in the right place. Lower is better.", "0.85", "1.20"),
 ]
 t = doc.add_table(rows=len(rows) + 1, cols=4); t.style = "Table Grid"; t.alignment = WD_TABLE_ALIGNMENT.CENTER; t.autofit = False
 widths = [1.45, 3.35, 1.0, 1.0]
@@ -92,6 +95,24 @@ para("Main avocado photos: a public dataset of 478 avocados photographed every d
      "(10 °C, 20 °C and room temperature); results are averaged over 5 separate training runs, scored on fruit the model never saw. "
      "Microwave-scan avocados: a small dataset from a University of Alabama lab that scanned avocados with microwave sensors "
      "as well as cameras. Only 4 fruit were followed until they spoiled, so these numbers are rough.",
+     size=8.5, color=GREY, italic=True, after=4)
+
+para("On the microwave-scan avocados the average error looks slightly better (1.0 vs 1.2 days), "
+     "but that comes from only 9 predictions on 4 fruit, so it could easily be luck. The other measures favour the main dataset: "
+     "the model orders fruit correctly 93 % of the time against 78 %, its ranges are a day narrower (4.3 vs 5.4 days), and its "
+     "overall forecast score is better (0.85 vs 1.20). The microwave result also comes from an earlier version of the model and a single "
+     "training run. The takeaway is that the same model works with a completely different sensor, but there is not yet enough "
+     "microwave data to say which sensor predicts better.", lead="Comparing the two datasets. ", after=4)
+
+doc.add_heading("How it compares with other AI models", level=1)
+doc.add_picture(CMP, width=Inches(6.3))
+doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+para("Main avocado photos. GRU, GRU-D and ODE-RNN are widely used neural networks for data that arrives over time; "
+     "\u201cour model without randomness\u201d is the same model with the random part switched off. Bars are averages over 5 training "
+     "runs, and the black lines show how much they vary between runs. Lower average error is better; the green band is the ideal "
+     "hit rate. Our model is within run-to-run variation of the best ones on average error. The model without randomness gives ranges "
+     "that are too narrow, so they miss more often. The published method gives a single number with no range, so its \u201crange\u201d "
+     "almost never contains the true day.",
      size=8.5, color=GREY, italic=True, after=4)
 
 doc.add_heading("Why the temperature rule matters", level=1)
