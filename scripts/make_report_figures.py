@@ -23,7 +23,6 @@ RUNS = ROOT / "results" / "runs"
 SEEDS = ROOT / "results" / "avocado_seeds"
 ROUND2 = ROOT / "results" / "avocado_round2"
 OUT = ROOT / "report" / "figures"
-BEFORE = ROOT / "report" / "before_fix"
 
 # reference categorical slots 1-3 (validated all-pairs), muted gray for context bars, text inks
 BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"

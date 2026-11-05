@@ -1,4 +1,3 @@
-# ruff: noqa  (one-off generator for report/Produce_Spoilage_SDE_Results.docx; runs in a python-docx venv)
 import json
 from pathlib import Path
 import numpy as np, matplotlib
@@ -6,7 +5,7 @@ import numpy as np, matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-R = Path("/fs/class-projects/fall2026/cmsc498z/nwajge/ripen/results")
+R = Path(__file__).resolve().parents[2] / "results"
 
 
 def vals(root, run, key, recal=True):
@@ -61,7 +60,7 @@ for ax, key, title, scale, fmt in [
         ax.set_xlim(0, 2.25)
 axes[0].set_yticks(ys, [l for l, *_ in models])
 fig.tight_layout()
-fig.savefig("/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/brief/plain_compare.png", dpi=200)
+fig.savefig(Path(__file__).resolve().parent / "compare.png", dpi=200)
 for l, r, run, rc, _ in models[::-1]:
     print(
         l.replace("\n", " "), [round(vals(r, run, k, rc).mean(), 3) for k in ("mae", "coverage80", "crps", "width80")]

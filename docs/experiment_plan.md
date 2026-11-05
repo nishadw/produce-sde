@@ -80,6 +80,5 @@ Hangud & Hangud 1.126 d fruit-weighted MAE.
 
 ## 4. Manual follow-ups
 
-- Gradient-method sweep (backprop / checkpoint / adjoint) for the latent SDE: `make gradients` or
-  `slurm/gradient_methods.sh`; compare wall-clock, memory and `nll`.
+- Gradient-method sweep (backprop / checkpoint / adjoint) for the latent SDE: `make gradients`; compare wall-clock, memory and `nll`.
 - Re-evaluate any finished run: `python scripts/evaluate.py results/runs/<run> [--every k] [--n-obs 1 3 5]`.

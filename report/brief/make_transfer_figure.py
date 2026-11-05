@@ -1,4 +1,3 @@
-# ruff: noqa  (one-off generator for report/Produce_Spoilage_SDE_Results.docx; runs in a python-docx venv)
 import json
 from pathlib import Path
 import numpy as np, matplotlib
@@ -6,7 +5,7 @@ import numpy as np, matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-S = Path("/fs/class-projects/fall2026/cmsc498z/nwajge/ripen/results/avocado_seeds")
+S = Path(__file__).resolve().parents[2] / "results" / "avocado_seeds"
 
 
 def vals(run):
@@ -52,5 +51,5 @@ ax.grid(axis="x", visible=False)
 ax.legend(loc="upper right", fontsize=9)
 ax.set_title("Error at a storage temperature the model never trained on", loc="left", fontsize=10.5, fontweight="bold")
 fig.tight_layout()
-fig.savefig("/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/brief/plain_transfer.png", dpi=200)
+fig.savefig(Path(__file__).resolve().parent / "transfer.png", dpi=200)
 print("ok")

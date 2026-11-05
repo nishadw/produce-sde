@@ -1,6 +1,6 @@
-# neural-sde-first-passage (package `ripen`)
+# produce-sde (package `ripen`)
 
-Latent neural SDEs with exact first-passage likelihoods (Kolmogorov PDEs) for censored time-to-event data.
+Latent neural SDEs with exact first-passage likelihoods (Kolmogorov PDEs) for predicting when avocados spoil.
 JAX/equinox/diffrax, Hydra configs. Start with README.md, then report/REPORT.md.
 
 ## Cluster

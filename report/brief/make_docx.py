@@ -1,4 +1,3 @@
-# ruff: noqa  (one-off generator for report/Produce_Spoilage_SDE_Results.docx; runs in a python-docx venv)
 """Plain-language one-page results summary (avocado only). Run from the scratch brief folder with python-docx."""
 
 from docx import Document
@@ -8,9 +7,12 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
-HERE = "/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/brief/"
-CMP = HERE + "plain_compare.png"
-FIG, OUT = HERE + "plain_transfer.png", HERE + "Produce_Spoilage_SDE_Results.docx"
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[1]
+CMP = str(HERE / "compare.png")
+FIG, OUT = str(HERE / "transfer.png"), str(REPO / "report" / "Produce_Spoilage_SDE_Results.docx")
 GREY = RGBColor(0x55, 0x5B, 0x65)
 
 doc = Document()

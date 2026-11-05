@@ -84,7 +84,8 @@ Each experiment is one Hydra command, e.g.
 src/ripen/   data loaders, models (latent SDE/ODE, fpt_pde, clocks, 7 baselines), trainer, metrics
 src/nsde/    SDE solver with gradient-method switch; Black–Scholes / Heston pricers
 configs/     Hydra configs        scripts/  train, evaluate, summarize, figures
-report/      results report       docs/     theory, literature, data notes
+report/      results report (REPORT.md) and the one-page Word summary (report/brief/)
+docs/        theory, literature, data notes, plans
 lecture/     graduate lecture on neural SDEs (slides, notes, demo)
 ```
 
