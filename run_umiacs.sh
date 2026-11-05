@@ -193,6 +193,8 @@ for m in wiener gamma_process landmark_cox; do for lr in 1e-3 1e-2 3e-2; do
 NB_ARGS_neural_cde="${NB_ARGS_neural_cde:-model.hidden=64 model.visit_dim=32}"
 NB_ARGS_transformer="${NB_ARGS_transformer:-model.d_model=32 model.layers=1}"
 NB_ARGS_landmark_cox="${NB_ARGS_landmark_cox:-train.lr=3e-2 train.epochs=200 train.patience=30}"
+NB_ARGS_gamma_process="${NB_ARGS_gamma_process:-train.lr=3e-2 train.epochs=200 train.patience=30}"
+NB_ARGS_wiener="${NB_ARGS_wiener:-}"   # default lr/epochs had the best val CRPS (1.33 vs 1.36-1.37)
 nb_runs() {
   NB_RUNS=()
   for m in "${NB_MODELS[@]}"; do
