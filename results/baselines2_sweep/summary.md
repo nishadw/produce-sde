@@ -18,6 +18,8 @@ Seeds: seed1. Cells are mean ± sample std over seeds; the split is fixed (same 
 | sweep_tf_d64_l2_lr3e-4 | 1 | 1.035 | 0.785 | 0.941 | 4.607 | 0.947 | 0.014 |
 | sweep_tf_d64_l3 | 1 | 0.985 | 0.713 | 0.915 | 3.495 | 0.943 | 0.010 |
 | sweep_wiener | 1 | 1.687 | 1.317 | 0.945 | 9.059 | 0.885 | 0.028 |
+| sweep_wiener_lr1e-2 | 1 | 1.639 | 1.350 | 0.946 | 10.007 | 0.881 | 0.037 |
+| sweep_wiener_lr3e-2 | 1 | 1.639 | 1.351 | 0.952 | 10.317 | 0.881 | 0.038 |
 
 ## Held-out storage temperature: MAE (d) and 80% coverage side by side
 

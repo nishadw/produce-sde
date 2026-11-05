@@ -43,9 +43,16 @@ def _batches(items: list[Item], info: DatasetInfo, bs: int, rng: np.random.Gener
         yield collate(chunk, info, n_obs=n_obs_mode, rng=rng, item_index=[int(j) for j in order[i : i + bs]])
 
 
+@eqx.filter_jit
+def _eval_loss_step(model, batch, key):
+    return model.loss(batch, key)
+
+
 def evaluate_loss(model, items: list[Item], info: DatasetInfo, bs: int, key, n_obs_mode: str = "random", seed=123):
+    # one module-level jitted function: a lambda built per call recompiled every epoch, and on CPU the never-freed
+    # executables exhausted mapped memory after ~150-270 epochs
     rng = np.random.default_rng(seed)
-    step = eqx.filter_jit(lambda m, b, k: m.loss(b, k))
+    step = _eval_loss_step
     tot, n = 0.0, 0
     for b in _batches(items, info, bs, rng, n_obs_mode, shuffle=False):
         key, sub = jax.random.split(key)

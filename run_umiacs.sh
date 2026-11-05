@@ -187,11 +187,12 @@ NB_SWEEP=("model=neural_cde run_name=sweep_cde_h32" "model=neural_cde model.hidd
   "model=transformer run_name=sweep_tf_d64_l2" "model=transformer model.d_model=32 model.layers=1 run_name=sweep_tf_d32_l1"
   "model=transformer train.lr=3e-4 run_name=sweep_tf_d64_l2_lr3e-4" "model=transformer model.d_model=64 model.layers=3 run_name=sweep_tf_d64_l3")
 # the classical models have a handful of parameters: they need a larger step and more epochs (60 at 1e-3 had not converged)
-for m in wiener gamma_process landmark_cox; do for lr in 1e-2 3e-2; do
-  NB_SWEEP+=("model=$m train.lr=$lr train.epochs=300 train.patience=30 run_name=sweep_${m}_lr$lr"); done; done
+for m in wiener gamma_process landmark_cox; do for lr in 1e-3 1e-2 3e-2; do
+  NB_SWEEP+=("model=$m train.lr=$lr train.epochs=200 train.patience=30 run_name=sweep_${m}_lr$lr"); done; done
 # chosen by val CRPS on the seed-1 sweep (results/baselines2_sweep/): CDE hidden 64; transformer d=32, 1 layer
 NB_ARGS_neural_cde="${NB_ARGS_neural_cde:-model.hidden=64 model.visit_dim=32}"
 NB_ARGS_transformer="${NB_ARGS_transformer:-model.d_model=32 model.layers=1}"
+NB_ARGS_landmark_cox="${NB_ARGS_landmark_cox:-train.lr=3e-2 train.epochs=200 train.patience=30}"
 nb_runs() {
   NB_RUNS=()
   for m in "${NB_MODELS[@]}"; do
