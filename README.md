@@ -34,26 +34,23 @@ full write-up with figures and every table is [`report/REPORT.md`](report/REPORT
 
 | | Result |
 |---|---|
-| **Transfer to an unseen storage temperature** | The Arrhenius clock beats both ablated clocks in all 15 seed × held-out-group pairs, cutting MAE **1.6–2.4×** (1.0 / 1.6 / 5.1 days on T20 / ambient / T10). On cold-storage extrapolation (T10) our models beat every black-box baseline (4.9–5.1 vs 6.1–7.1 days); on T20 and ambient GRU-D is as good when it doesn't fail, but it is far less stable across seeds (ambient 1.8 ± 1.9) |
-| **SDE vs ODE calibration** | Same ranking (C ≈ 0.93), but 80% intervals cover **94 ± 2%** for the SDE vs **64 ± 4%** for the deterministic latent ODE: the diffusion term fixes the ODE's over-confidence |
-| **Sparse observations** | With a photo every 3rd day the latent SDE has the best CRPS (0.99 ± 0.04 vs 1.98 ± 0.34 for GRU-D), no worse than on daily photos |
-| **vs the published baseline** | Every distributional model beats classify-then-regress (CRPS 1.81 → 0.83–1.08) |
+| **Transfer to an unseen storage temperature** | The Arrhenius clock beats both ablated clocks on every held-out group, cutting MAE **1.5–2.4×** (guided model: 1.1 / 1.4 / 5.5 days on T20 / ambient / T10). On cold storage (T10) it beats every learned baseline (transformer 7.9, GRU-D 7.1), but the classical Wiener degradation process does better still (3.0 days, 74 % coverage) |
+| **Sparse observations** | With a photo every 3rd day the latent SDE has CRPS 0.97 vs 1.5–2.7 for every other model, including the transformer (1.89); significant against the transformer, Wiener and GRU-D at both sparse rates (paired bootstrap) |
+| **In-distribution** | Guided + recalibrated latent SDE: CRPS 0.85 ± 0.01, MAE 1.20 days, 93 % coverage. Statistically tied with GRU + gap, ODE-RNN and GRU-D; a small transformer is significantly better (0.74 ± 0.06); neural CDE, Wiener, gamma and landmark Cox are significantly worse |
+| **SDE vs ODE calibration** | Same ranking (C ≈ 0.93), but 80% intervals cover **94 ± 2%** for the SDE vs **64 ± 4%** for the deterministic latent ODE |
+| **vs the published baseline** | Every distributional model beats classify-then-regress (CRPS 1.81) |
 
-The SDE result is about calibration, robustness and transfer, not raw accuracy. In-distribution, ODE-RNN and
-GRU + gap are the most accurate (CRPS 0.83 ± 0.14 and 0.84 ± 0.03, vs 0.99 for the latent SDE).
+The SDE result is about robustness and transfer, not raw in-distribution accuracy, where a transformer is best.
 
 On synthetic data the latent SDE's clock rates used to come out 14–24 % too fast; a guided posterior fixes that
-(now +2–10 %, σ 0.256 vs 0.25).
+(now +2–10 %, σ 0.256 vs 0.25). With guidance, the exact PDE likelihood also catches up with Monte Carlo on avocado
+(CRPS 0.85 vs 0.87 recalibrated).
 
-**Round 2 (avocado, 5 seeds).**
-* **Guided posterior:** brings the latent SDE's in-distribution CRPS from 0.99 to 0.91, or 0.85 ± 0.01 after
-  post-hoc recalibration, within noise of GRU + gap (0.82 ± 0.04).
-* **Cold storage:** guidance makes the intervals more over-confident there (T10 coverage 0.19 → 0.07).
+Baselines: 7 original (stage → linear, direct regressor, discrete survival, GRU + gap, GRU-D, ODE-RNN, latent ODE)
+plus 5 added in Round 2 (Wiener and gamma degradation processes with an Arrhenius clock, landmark Cox, neural CDE,
+transformer). See `report/REPORT.md`, "Round 2b", "New baselines" and "Paired significance tests".
 
-See `report/REPORT.md`, "Round 2".
-
-Still open: the exact PDE likelihood loses to Monte Carlo (not yet rerun with guidance), and cold-storage intervals
-are too narrow for every model.
+Still open: cold-storage intervals are too narrow for every learned model.
 
 ## SDE foundations (`src/nsde`)
 
@@ -81,7 +78,7 @@ Each experiment is one Hydra command, e.g.
 ## Layout
 
 ```
-src/ripen/   data loaders, models (latent SDE/ODE, fpt_pde, clocks, 7 baselines), trainer, metrics
+src/ripen/   data loaders, models (latent SDE/ODE, fpt_pde, clocks, 12 baselines), trainer, metrics
 src/nsde/    SDE solver with gradient-method switch; Black–Scholes / Heston pricers
 configs/     Hydra configs        scripts/  train, evaluate, summarize, figures
 report/      results report (REPORT.md) and the one-page Word summary (report/brief/)

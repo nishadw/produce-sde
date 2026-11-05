@@ -5,7 +5,7 @@ import numpy as np, matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-S = Path(__file__).resolve().parents[2] / "results" / "avocado_seeds"
+S = Path(__file__).resolve().parents[2] / "results" / "avocado_round2"
 
 
 def vals(run):
@@ -40,7 +40,7 @@ fig, ax = plt.subplots(figsize=(7.2, 3.6))
 w = 0.26
 for i, (lab, suf, c) in enumerate(series):
     xs = np.arange(3) + (i - 1) * (w + 0.02)
-    m = [vals(f"latent_sde_avocado_logo_{g}{suf}").mean() for g, _ in groups]
+    m = [vals(f"latent_sde_avocado_logo_{g}{suf}_guided_r18").mean() for g, _ in groups]
     bars = ax.bar(xs, m, w, color=c, label=lab)
     for x, v in zip(xs, m):
         ax.text(x, v + 0.12, f"{v:.1f}", ha="center", va="bottom", fontsize=9, color="#333333")

@@ -12,6 +12,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 CMP = str(HERE / "compare.png")
+HELD = str(HERE / "heldout.png")
 FIG, OUT = str(HERE / "transfer.png"), str(REPO / "report" / "Produce_Spoilage_SDE_Results.docx")
 GREY = RGBColor(0x55, 0x5B, 0x65)
 
@@ -107,26 +108,26 @@ doc.add_heading("Main findings", level=1)
 for lead, txt in [
     (
         "Accurate: ",
-        "on average the prediction is 1.2 days off, and the true spoilage day lands inside the model's “80 % likely” range 93 % of the time. That is about as good as the best standard AI models we compared against (chart below).",
+        "on average the prediction is 1.2 days off, and the true spoilage day lands inside the model's “80 % likely” range 93 % of the time. It ties three standard AI models and clearly beats a neural CDE and three classic statistics models. One model, a transformer, is a little better here (1.0 days off); the gap is small but real.",
     ),
     (
         "Works at new temperatures: ",
-        "when trained on two storage temperatures and tested on a third it never saw, the temperature rule cuts the error by 1.5 to 2.4 times (figure below).",
+        "when trained on two storage temperatures and tested on a third it never saw, the temperature rule cuts the error by 1.5 to 3 times (figure below).",
     ),
     (
         "Needs fewer photos: ",
-        "with a photo only every third day its accuracy barely changes, while the best standard model's error roughly doubles.",
+        "with a photo only every third day it is 1.4 days off, against 1.9 to 2.6 days for every other model, including the transformer. With fewer photos it beats every model we tested, and by more than chance could explain.",
     ),
     (
         "Weak spot: ",
-        "for fruit stored colder than anything it trained on, it is about 5 days off and too confident in its range.",
+        "for fruit stored colder than anything it trained on, it is about 5 days off and too confident in its range. A simple classic statistics model (the Wiener process, below) does better there, at about 3 days off.",
     ),
 ]:
     para(txt, lead=lead, style="List Bullet", after=2)
 
 doc.add_heading("Results", level=1)
 rows = [
-    ("Average error", "How many days off the prediction is, on average. Lower is better.", "1.2 days", "1.0 days"),
+    ("Average error", "How many days off the prediction is, on average. Lower is better.", "1.2 days", "1.5 days"),
     (
         "Range hit rate",
         "How often the real spoilage day falls inside the model's “80 % likely” range. About 80–90 % means the ranges are honest.",
@@ -137,19 +138,19 @@ rows = [
         "Ordering accuracy",
         "Given two fruits, how often the model correctly says which spoils first. 50 % is a coin flip; 100 % is perfect.",
         "93 %",
-        "78 %",
+        "77 %",
     ),
     (
         "Range width",
         "How wide the \u201c80 % likely\u201d range is. Narrower is more useful, as long as the hit rate stays high.",
         "4.3 days",
-        "5.4 days",
+        "5.0 days",
     ),
     (
         "Overall forecast score (CRPS)",
         "One number that scores the whole range of predictions at once, in days. It rewards being right and being confident in the right place. Lower is better.",
         "0.85",
-        "1.20",
+        "1.29",
     ),
 ]
 t = doc.add_table(rows=len(rows) + 1, cols=4)
@@ -179,7 +180,7 @@ para(
     "Main avocado photos: a public dataset of 478 avocados photographed every day at three storage temperatures "
     "(10 °C, 20 °C and room temperature); results are averaged over 5 separate training runs, scored on fruit the model never saw. "
     "Microwave-scan avocados: a small dataset from a University of Alabama lab that scanned avocados with microwave sensors "
-    "as well as cameras. Only 4 fruit were followed until they spoiled, so these numbers are rough.",
+    "as well as cameras. Only 4 fruit were followed until they spoiled, so these numbers are rough. Main-photo ranges were fine-tuned on fruit held back from training; the microwave set is too small for that, so its numbers are untuned.",
     size=8.5,
     color=GREY,
     italic=True,
@@ -187,12 +188,11 @@ para(
 )
 
 para(
-    "On the microwave-scan avocados the average error looks slightly better (1.0 vs 1.2 days), "
-    "but that comes from only 9 predictions on 4 fruit, so it could easily be luck. The other measures favour the main dataset: "
-    "the model orders fruit correctly 93 % of the time against 78 %, its ranges are a day narrower (4.3 vs 5.4 days), and its "
-    "overall forecast score is better (0.85 vs 1.20). The microwave result also comes from an earlier version of the model and a single "
-    "training run. The takeaway is that the same model works with a completely different sensor, but there is not yet enough "
-    "microwave data to say which sensor predicts better.",
+    "With the same model and 5 training runs on each, the main photos give better predictions on every measure: "
+    "1.2 vs 1.5 days average error, 93 % vs 77 % ordering accuracy, narrower ranges (4.3 vs 5.0 days) and a better overall "
+    "score (0.85 vs 1.29). The microwave numbers come from only 9 predictions on 3 test fruit, so they are rough. "
+    "Two things are encouraging: the same model works with a completely different sensor, and its range hit rate (89 %) "
+    "stays honest. There is not yet enough microwave data to say whether the sensor itself is better or worse.",
     lead="Comparing the two datasets. ",
     after=4,
 )
@@ -201,12 +201,13 @@ doc.add_heading("How it compares with other AI models", level=1)
 doc.add_picture(CMP, width=Inches(6.3))
 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 para(
-    "Main avocado photos. GRU, GRU-D and ODE-RNN are widely used neural networks for data that arrives over time; "
-    "\u201cour model without randomness\u201d is the same model with the random part switched off. Bars are averages over 5 training "
-    "runs, and the black lines show how much they vary between runs. Lower average error is better; the green band is the ideal "
-    "hit rate. Our model is within run-to-run variation of the best ones on average error. The model without randomness gives ranges "
-    "that are too narrow, so they miss more often. The published method gives a single number with no range, so its \u201crange\u201d "
-    "almost never contains the true day.",
+    "Main avocado photos. GRU, GRU-D, ODE-RNN, the transformer and the neural CDE (controlled differential equation) are AI "
+    "models built for data that arrives over time. The Wiener and gamma processes are classic statistics models of wear that "
+    "build up until a breaking point. Landmark Cox is the standard survival model from medicine. \u201cOur model without randomness\u201d "
+    "is the same model with the random part switched off. Bars are averages over 5 training runs; the black lines show how much "
+    "they vary between runs. Lower average error is better; the green band is the ideal hit rate. The transformer is slightly "
+    "ahead; GRU, GRU-D and ODE-RNN are statistically tied with ours; the rest are clearly behind. The published method gives a "
+    "single number with no range, so its \u201crange\u201d almost never contains the true day.",
     size=8.5,
     color=GREY,
     italic=True,
@@ -218,7 +219,20 @@ doc.add_picture(FIG, width=Inches(6.2))
 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 para(
     "Each group of bars hides one storage temperature during training, then tests on it. The blue bar is our model; the grey "
-    "bars are the same model without the temperature rule. Lower is better. (Results from the first round of experiments, 5 training runs each.)",
+    "bars are the same model without the temperature rule. Lower is better. Averages over 5 training runs.",
+    size=8.5,
+    color=GREY,
+    italic=True,
+    after=0,
+)
+doc.add_heading("Against other models at a new temperature", level=1)
+doc.add_picture(HELD, width=Inches(6.2))
+doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+para(
+    "Same test as above: train on two storage temperatures, test on the third. Left: average error. Right: range hit rate "
+    "(about 80 % is ideal). At 20 \u00b0C and room temperature the transformer is the most accurate. In cold storage (10 \u00b0C) "
+    "every AI model, ours included, is several days off and gives ranges that almost never contain the true day. The Wiener "
+    "process, which only extends the fruit's own trend, holds up best there. Cold storage is our model’s main weak spot.",
     size=8.5,
     color=GREY,
     italic=True,
