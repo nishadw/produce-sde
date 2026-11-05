@@ -43,7 +43,7 @@
   r2-pilot 8166761/8166766 + summary 8166767 (after features2) -> results/avocado_round2_pilot/.
 - Gate passed: probe stage acc 0.759 (DINOv2) vs 0.714 (ResNet-18), days-left MAE 2.96 vs 2.91 (tie). Pilot clean
   (seed 1: latent SDE CRPS 0.923, GRU-D 0.965).
-- 2026-11-04: `bash run_umiacs.sh r2` submitted: 45 jobs 8167192-8167237 (r2_0..r2_44) + summary 8167238 (afterany)
+- 2026-11-04: `bash run_umiacs.sh r2` submitted: 45 jobs 8167177-8167237 (r2_0..r2_44) + summary 8167238 (afterany)
   -> results/avocado_round2/summary.md + summary_recal.md. Then: update report + professor summary page.
 
 ## Next
