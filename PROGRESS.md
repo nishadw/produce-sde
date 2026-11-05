@@ -19,9 +19,15 @@ Current state as of 2026-11-05. The day-by-day log up to this point is in git hi
   - Their data and runs are archived in `/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/archive_removed_2026-11-05`.
 
 ## In progress (2026-11-05, started by the go-ahead)
-- Step 1 submitted: `bash run_umiacs.sh r2b` -> jobs 8176371-8176383 (13 runs x 5 seeds) + summary 8176384
+- Step 1 (main model, Round 2b): `bash run_umiacs.sh r2b` -> jobs 8176371-8176383 (13 runs x 5 seeds) + summary 8176384
   -> results/avocado_round2/. Check: `sacct -u $USER -S today -X | grep r2b`.
-- Next: code wiener / gamma / landmark Cox / Neural CDE / transformer baselines, pilot, then submit them (stage `nb`).
+- New baselines written and tested (`models/classical.py`; `neural_cde`/`transformer` encoders). CPU-only jobs.
+  - Seed-1 sweep (results/baselines2_sweep/): picked CDE hidden 64 (val CRPS 1.04) and transformer d=32, 1 layer
+    (val 0.84; test 0.71 -- better than the main model's 0.85 recal; to be confirmed over 5 seeds).
+  - Classical models had not converged at lr 1e-3 / 60 epochs; LR re-sweep (1e-2, 3e-2; 300 epochs) = 8176601-8176607.
+  - Neural 5-seed runs: `RIPEN_NB_MODELS="neural_cde transformer" bash run_umiacs.sh nb` -> results/baselines2/, summary 8176622.
+  - Then: classical 5-seed runs with the chosen lr (`NB_ARGS_wiener=...` etc.), paired bootstrap
+    (`scripts/paired_bootstrap.py`), figures, REPORT/README, docx.
 
 ## Next steps, in order
 1. **Finish Round 2 for the main model** (about 12 five-seed jobs, roughly half a day on 4 GPUs). Every number in the doc

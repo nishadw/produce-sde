@@ -181,13 +181,17 @@ R2B_RUNS+=("model=latent_sde $A2SL_ARGS $R2_GUIDE run_name=latent_sde_a2sl_guide
 
 # New baselines (classical degradation + landmark Cox; neural CDE + transformer): pilot/sweep on seed 1, then 5 seeds
 # on E1, E3 (3 held-out groups), E4 (every 2nd / 3rd day) and A2SL -> results/baselines2/
-NB_MODELS=(wiener gamma_process landmark_cox neural_cde transformer)
+read -r -a NB_MODELS <<< "${RIPEN_NB_MODELS:-wiener gamma_process landmark_cox neural_cde transformer}"
 NB_SWEEP=("model=neural_cde run_name=sweep_cde_h32" "model=neural_cde model.hidden=64 model.visit_dim=32 run_name=sweep_cde_h64"
   "model=neural_cde train.lr=3e-4 run_name=sweep_cde_h32_lr3e-4"
   "model=transformer run_name=sweep_tf_d64_l2" "model=transformer model.d_model=32 model.layers=1 run_name=sweep_tf_d32_l1"
   "model=transformer train.lr=3e-4 run_name=sweep_tf_d64_l2_lr3e-4" "model=transformer model.d_model=64 model.layers=3 run_name=sweep_tf_d64_l3")
-for m in wiener gamma_process landmark_cox; do NB_SWEEP+=("model=$m run_name=sweep_$m"); done
-NB_ARGS_neural_cde="${NB_ARGS_neural_cde:-}"; NB_ARGS_transformer="${NB_ARGS_transformer:-}"
+# the classical models have a handful of parameters: they need a larger step and more epochs (60 at 1e-3 had not converged)
+for m in wiener gamma_process landmark_cox; do for lr in 1e-2 3e-2; do
+  NB_SWEEP+=("model=$m train.lr=$lr train.epochs=300 train.patience=30 run_name=sweep_${m}_lr$lr"); done; done
+# chosen by val CRPS on the seed-1 sweep (results/baselines2_sweep/): CDE hidden 64; transformer d=32, 1 layer
+NB_ARGS_neural_cde="${NB_ARGS_neural_cde:-model.hidden=64 model.visit_dim=32}"
+NB_ARGS_transformer="${NB_ARGS_transformer:-model.d_model=32 model.layers=1}"
 nb_runs() {
   NB_RUNS=()
   for m in "${NB_MODELS[@]}"; do
@@ -220,7 +224,10 @@ seed_jobs() {
 stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
 stage_r2b() { seed_jobs r2b results/avocado_round2 "${R2B_RUNS[@]}"; }
 # the new baselines are small: run them on CPU (RIPEN_GPU=none, JAX_PLATFORMS=cpu) so they don't queue behind GPU jobs
-stage_nb_sweep() { RIPEN_GPU=none JAX_PLATFORMS=cpu RIPEN_SEEDS=1 seed_jobs nbsweep results/baselines2_sweep "${NB_SWEEP[@]}"; }
+stage_nb_sweep() {
+  local runs=("${NB_SWEEP[@]}"); [[ -n "${RIPEN_SWEEP_FILTER:-}" ]] && mapfile -t runs < <(printf '%s\n' "${NB_SWEEP[@]}" | grep -E "$RIPEN_SWEEP_FILTER")
+  RIPEN_GPU=none JAX_PLATFORMS=cpu RIPEN_SEEDS=1 seed_jobs nbsweep results/baselines2_sweep "${runs[@]}"
+}
 stage_nb() { nb_runs; RIPEN_GPU=none JAX_PLATFORMS=cpu seed_jobs nb results/baselines2 "${NB_RUNS[@]}"; }
 
 stage_recal() {
