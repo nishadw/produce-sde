@@ -41,7 +41,10 @@
 - Found: integer-day quantiles make a perfect forecaster score cov80 0.85-0.88, not 0.80 (see plan note).
 - Submitted: features2 8166759 (extract + probe), recal 8166760 (Round 1 recalibrated -> results/avocado_seeds/summary_recal.md),
   r2-pilot 8166761/8166766 + summary 8166767 (after features2) -> results/avocado_round2_pilot/.
-- Next: read results/feature_probe.md (gate: DINOv2 >= ResNet-18) and the pilot; then `bash run_umiacs.sh r2`.
+- Gate passed: probe stage acc 0.759 (DINOv2) vs 0.714 (ResNet-18), days-left MAE 2.96 vs 2.91 (tie). Pilot clean
+  (seed 1: latent SDE CRPS 0.923, GRU-D 0.965).
+- 2026-11-04: `bash run_umiacs.sh r2` submitted: 45 jobs 8167192-8167237 (r2_0..r2_44) + summary 8167238 (afterany)
+  -> results/avocado_round2/summary.md + summary_recal.md. Then: update report + professor summary page.
 
 ## Next
 - Rerun E1-E4 (avocado) with model.posterior_guidance=true model.event_mean=log_mean, if the user wants it.
