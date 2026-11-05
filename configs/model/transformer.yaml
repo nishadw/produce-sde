@@ -1,0 +1,11 @@
+# Small transformer over the visit sequence (2 layers, d=64, 4 heads; time + gap encodings) -> survival head.
+name: transformer
+horizon: ${horizon}
+hidden: 64
+visit_dim: 32
+group_dim: 4
+d_model: 64
+heads: 4
+layers: 2
+use_images: true
+use_stages: false

@@ -1,4 +1,4 @@
-"""Sequence model: history encoder (GRU / GRU-D / ODE-RNN) -> discrete survival head.
+"""Sequence model: history encoder (GRU / GRU-D / ODE-RNN / neural CDE / transformer) -> discrete survival head.
 
 Trained with the interval-censored likelihood on one prediction instance per
 item. With ``n_obs_mode: random`` in the trainer the visible prefix is
@@ -15,13 +15,13 @@ from jax import Array
 
 from ..data.collate import Batch
 from .base import interval_log_prob_from_logits, pmf_to_cdf
-from .encoders import SequenceEncoder, VisitEncoder
+from .encoders import VisitEncoder, make_sequence_encoder
 from .heads import DiscreteSurvivalHead, context_features, group_embedding
 
 
 class SequenceSurvival(eqx.Module):
     visit_enc: VisitEncoder
-    seq_enc: SequenceEncoder
+    seq_enc: eqx.Module
     head: DiscreteSurvivalHead
     group_emb: eqx.nn.Embedding | None
     horizon: int = eqx.field(static=True)
@@ -39,10 +39,11 @@ class SequenceSurvival(eqx.Module):
         use_stages: bool = False,
         *,
         key,
+        **enc_kw,
     ):
         k1, k2, k3, k4 = jax.random.split(key, 4)
         self.visit_enc = VisitEncoder(feat_dim, visit_dim, use_images, use_stages, key=k1)
-        self.seq_enc = SequenceEncoder(encoder, visit_dim, hidden, key=k2)
+        self.seq_enc = make_sequence_encoder(encoder, visit_dim, hidden, key=k2, **enc_kw)
         self.group_emb = group_embedding(n_groups, group_dim, k4) if group_dim > 0 else None
         self.head = DiscreteSurvivalHead(hidden + 1 + group_dim, horizon, key=k3)
         self.horizon = horizon

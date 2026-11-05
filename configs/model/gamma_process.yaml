@@ -1,0 +1,5 @@
+# Gamma degradation process on the running max of the stage history: per-fruit random rate, Arrhenius clock.
+name: gamma_process
+horizon: ${horizon}
+clock: arrhenius
+clock_kwargs: {ea_j_mol: 50000.0, rate_ref: auto, t_ref_c: 20.0}

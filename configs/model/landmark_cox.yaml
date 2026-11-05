@@ -1,0 +1,3 @@
+# Landmark discrete-time proportional hazards (cloglog) on stage-history covariates and 1000/T.
+name: landmark_cox
+horizon: ${horizon}

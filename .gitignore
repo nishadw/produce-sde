@@ -32,3 +32,5 @@ multirun/
 # per-machine settings for run_umiacs.sh
 .ripen.env
 results/avocado_round2/seed*/
+results/baselines2/seed*/
+results/baselines2_sweep/seed*/

@@ -8,6 +8,7 @@ import jax
 
 from ..data.collate import DatasetInfo
 from .baselines import DirectRegressor, DiscreteSurvival, StageLinearRule
+from .classical import GammaDegradation, LandmarkCox, WienerDegradation
 from .fpt_filter import FirstPassageFilter
 from .latent import LatentDynamics
 from .sequence import SequenceSurvival
@@ -26,6 +27,7 @@ def _seq(encoder):
             use_images=cfg.get("use_images", True),
             use_stages=cfg.get("use_stages", False),
             key=key,
+            **{k: cfg[k] for k in ("substeps", "d_model", "heads", "layers") if k in cfg},
         )
 
     return make
@@ -65,6 +67,20 @@ MODEL_REGISTRY = {
     "gru_gap": _seq("gru"),
     "gru_d": _seq("gru_d"),
     "ode_rnn": _seq("ode_rnn"),
+    "neural_cde": _seq("cde"),
+    "transformer": _seq("transformer"),
+    "wiener": lambda cfg, info, key: WienerDegradation(
+        len(info.groups),
+        cfg["horizon"],
+        cfg.get("clock", "arrhenius"),
+        cfg.get("clock_kwargs"),
+        cfg.get("obs_weight", 1.0),
+        key=key,
+    ),
+    "gamma_process": lambda cfg, info, key: GammaDegradation(
+        len(info.groups), cfg["horizon"], cfg.get("clock", "arrhenius"), cfg.get("clock_kwargs"), key=key
+    ),
+    "landmark_cox": lambda cfg, info, key: LandmarkCox(cfg["horizon"], key=key),
     "fpt_filter": lambda cfg, info, key: FirstPassageFilter(
         info.feat_dim,
         len(info.groups),

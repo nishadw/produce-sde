@@ -28,6 +28,8 @@
 #   Round 2 (docs/round2_plan.md):
 #   r2         guided-posterior latent SDE (ResNet-18 features), 5 seeds: in-distribution + 3 held-out groups
 #              results/avocado_round2/
+#   nb-sweep   new baselines, seed 1, small config sweep (pick by val CRPS) -> results/baselines2_sweep/
+#   nb         new baselines x {E1, LOGO x3, every2/3, A2SL}, 5 seeds; NB_ARGS_<model>='...' passes the chosen config
 #   r2b        the rest for the guided model: labels-only, MC likelihood, clock ablation, sparse photos, and
 #              A2SL (guided latent SDE, GRU-D, FPT filter)   results/avocado_round2/
 #   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
@@ -176,6 +178,26 @@ A2SL_ARGS="data=a2sl horizon=20 train.batch_size=8"
 R2B_RUNS+=("model=latent_sde $A2SL_ARGS $R2_GUIDE run_name=latent_sde_a2sl_guided_r18"
   "model=gru_d $A2SL_ARGS" "model=fpt_filter $A2SL_ARGS")
 
+# New baselines (classical degradation + landmark Cox; neural CDE + transformer): pilot/sweep on seed 1, then 5 seeds
+# on E1, E3 (3 held-out groups), E4 (every 2nd / 3rd day) and A2SL -> results/baselines2/
+NB_MODELS=(wiener gamma_process landmark_cox neural_cde transformer)
+NB_SWEEP=("model=neural_cde run_name=sweep_cde_h32" "model=neural_cde model.hidden=64 model.visit_dim=32 run_name=sweep_cde_h64"
+  "model=neural_cde train.lr=3e-4 run_name=sweep_cde_h32_lr3e-4"
+  "model=transformer run_name=sweep_tf_d64_l2" "model=transformer model.d_model=32 model.layers=1 run_name=sweep_tf_d32_l1"
+  "model=transformer train.lr=3e-4 run_name=sweep_tf_d64_l2_lr3e-4" "model=transformer model.d_model=64 model.layers=3 run_name=sweep_tf_d64_l3")
+for m in wiener gamma_process landmark_cox; do NB_SWEEP+=("model=$m run_name=sweep_$m"); done
+NB_ARGS_neural_cde="${NB_ARGS_neural_cde:-}"; NB_ARGS_transformer="${NB_ARGS_transformer:-}"
+nb_runs() {
+  NB_RUNS=()
+  for m in "${NB_MODELS[@]}"; do
+    local extra_var="NB_ARGS_$m" x; x="${!extra_var:-}"
+    NB_RUNS+=("model=$m $x")
+    for g in T10 T20 Tamb; do NB_RUNS+=("model=$m $x +experiment=logo splits.held_out=$g"); done
+    for k in 2 3; do NB_RUNS+=("model=$m $x +experiment=sampling_every$k"); done
+    NB_RUNS+=("model=$m $x data=a2sl horizon=20 train.batch_size=8")
+  done
+}
+
 # seed_jobs TAG ROOT run-args... : one job per run looping over RIPEN_SEEDS, then a summary job (afterany)
 seed_jobs() {
   local tag="$1" root="$2"; shift 2
@@ -196,6 +218,8 @@ seed_jobs() {
 
 stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
 stage_r2b() { seed_jobs r2b results/avocado_round2 "${R2B_RUNS[@]}"; }
+stage_nb_sweep() { RIPEN_SEEDS=1 seed_jobs nbsweep results/baselines2_sweep "${NB_SWEEP[@]}"; }
+stage_nb() { nb_runs; seed_jobs nb results/baselines2 "${NB_RUNS[@]}"; }
 
 stage_recal() {
   JOBS[recal]=$(submit recal "$PY scripts/recalibrate.py results/avocado_seeds && $PY scripts/summarize_seeds.py --recal")
@@ -224,6 +248,8 @@ case "$STAGE" in
   seeds-summary) "$PY" scripts/summarize_seeds.py ;;
   r2) stage_r2 ;;
   r2b) stage_r2b ;;
+  nb-sweep) stage_nb_sweep ;;
+  nb) stage_nb ;;
   recal) stage_recal ;;
   all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e6; stage_summary ;;
   *) die "unknown stage $STAGE" ;;

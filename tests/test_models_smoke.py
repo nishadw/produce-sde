@@ -42,7 +42,7 @@ def test_sequence_encoders_ignore_hidden_visits(synthetic_items, synthetic_info)
     b1 = collate(items, synthetic_info, n_obs=2)
     feat2 = b1.feat.at[:, 3:].set(99.0)
     b2 = eqx.tree_at(lambda b: b.feat, b1, feat2)
-    for name in ("gru_gap", "gru_d", "ode_rnn"):
+    for name in ("gru_gap", "gru_d", "ode_rnn", "neural_cde", "transformer"):
         model = build_model({"name": name, "horizon": HORIZON}, synthetic_info, jax.random.PRNGKey(0))
         F1, F2 = model.predict_cdf(b1, jax.random.PRNGKey(0)), model.predict_cdf(b2, jax.random.PRNGKey(0))
         assert np.allclose(np.asarray(F1), np.asarray(F2)), name
