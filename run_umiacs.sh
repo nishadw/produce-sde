@@ -65,8 +65,9 @@ submit_raw() {
   local name="$1" cmd="$2" time="$3"; shift 3
   [[ "${RIPEN_ACCOUNT:-CHANGE_ME}" == "CHANGE_ME" || -z "${RIPEN_ACCOUNT:-}" ]] && die "set RIPEN_ACCOUNT / RIPEN_PARTITION / RIPEN_QOS first"
   local deps=("${AFTER[@]}" "$@") dep=""; [[ ${#deps[@]} -gt 0 ]] && dep="--dependency=afterok:$(IFS=:; echo "${deps[*]}")"
+  local gres="--gres=$RIPEN_GPU"; [[ "$RIPEN_GPU" == none ]] && gres=""  # RIPEN_GPU=none: CPU-only job
   sbatch --parsable --job-name="ripen-$name" --output="results/logs/%x-%j.out" --time="$time" --cpus-per-task=4 --mem=16G \
-    --gres="$RIPEN_GPU" --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" $dep \
+    $gres --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" $dep \
     --wrap="cd '$RIPEN_ROOT' && $cmd"
 }
 
@@ -218,8 +219,9 @@ seed_jobs() {
 
 stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
 stage_r2b() { seed_jobs r2b results/avocado_round2 "${R2B_RUNS[@]}"; }
-stage_nb_sweep() { RIPEN_SEEDS=1 seed_jobs nbsweep results/baselines2_sweep "${NB_SWEEP[@]}"; }
-stage_nb() { nb_runs; seed_jobs nb results/baselines2 "${NB_RUNS[@]}"; }
+# the new baselines are small: run them on CPU (RIPEN_GPU=none, JAX_PLATFORMS=cpu) so they don't queue behind GPU jobs
+stage_nb_sweep() { RIPEN_GPU=none JAX_PLATFORMS=cpu RIPEN_SEEDS=1 seed_jobs nbsweep results/baselines2_sweep "${NB_SWEEP[@]}"; }
+stage_nb() { nb_runs; RIPEN_GPU=none JAX_PLATFORMS=cpu seed_jobs nb results/baselines2 "${NB_RUNS[@]}"; }
 
 stage_recal() {
   JOBS[recal]=$(submit recal "$PY scripts/recalibrate.py results/avocado_seeds && $PY scripts/summarize_seeds.py --recal")
