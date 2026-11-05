@@ -215,7 +215,7 @@ seed_jobs() {
     local cmd="fail=0; for s in $seeds; do $PY scripts/train.py $data $args seed=\$s +train.seed=\$s 'out_dir=$root/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
     JOBS[${tag}_$i]=$(submit "$tag-$i" "$cmd"); [[ "${JOBS[${tag}_$i]}" != local ]] && deps+=("${JOBS[${tag}_$i]}"); i=$((i + 1))
   done
-  local post="$PY scripts/recalibrate.py $root && $PY scripts/summarize_seeds.py --root $root && $PY scripts/summarize_seeds.py --root $root --recal"
+  local post="$PY scripts/recalibrate.py $root && $PY scripts/summarize_seeds.py --root $root ${RIPEN_SUMMARY_ARGS:-} && $PY scripts/summarize_seeds.py --root $root --recal ${RIPEN_SUMMARY_ARGS:-}"
   if [[ $LOCAL -eq 1 ]]; then bash -c "$post"; else
     local dep=""; [[ ${#deps[@]} -gt 0 ]] && dep="--dependency=afterany:$(IFS=:; echo "${deps[*]}")"
     JOBS[${tag}_summary]=$(sbatch --parsable --job-name="ripen-$tag-summary" --output="results/logs/%x-%j.out" --time=00:30:00 \
@@ -224,8 +224,8 @@ seed_jobs() {
   fi
 }
 
-stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
-stage_r2b() { seed_jobs r2b results/avocado_round2 "${R2B_RUNS[@]}"; }
+stage_r2() { RIPEN_SUMMARY_ARGS="--suffix _guided_r18" seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
+stage_r2b() { RIPEN_SUMMARY_ARGS="--suffix _guided_r18" seed_jobs r2b results/avocado_round2 "${R2B_RUNS[@]}"; }
 # the new baselines are small: run them on CPU (RIPEN_GPU=none, JAX_PLATFORMS=cpu) so they don't queue behind GPU jobs
 stage_nb_sweep() {
   local runs=("${NB_SWEEP[@]}"); [[ -n "${RIPEN_SWEEP_FILTER:-}" ]] && mapfile -t runs < <(printf '%s\n' "${NB_SWEEP[@]}" | grep -E "$RIPEN_SWEEP_FILTER")

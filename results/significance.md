@@ -24,9 +24,9 @@ Per-prediction CRPS and absolute error averaged over seeds, fruit resampled 5000
 | Tamb_vs_wiener | 128 | 1049 | +0.006 [-0.068, +0.085] | +0.042 [-0.065, +0.156] |
 | Tamb_vs_gamma_process | 128 | 1049 | +0.181 [+0.109, +0.258] * | +0.279 [+0.183, +0.379] * |
 | Tamb_vs_gru_d | 128 | 1049 | -0.443 [-0.486, -0.399] * | -0.432 [-0.495, -0.367] * |
-| every2_vs_transformer | — | — | missing: no results/avocado_round2/seed*/latent_sde_avocado_every2_guided_r18 | |
-| every2_vs_wiener | — | — | missing: no results/avocado_round2/seed*/latent_sde_avocado_every2_guided_r18 | |
-| every2_vs_gru_d | — | — | missing: no results/avocado_round2/seed*/latent_sde_avocado_every2_guided_r18 | |
-| every3_vs_transformer | — | — | missing: no results/avocado_round2/seed*/latent_sde_avocado_every3_guided_r18 | |
-| every3_vs_wiener | — | — | missing: no results/avocado_round2/seed*/latent_sde_avocado_every3_guided_r18 | |
-| every3_vs_gru_d | — | — | missing: no results/avocado_round2/seed*/latent_sde_avocado_every3_guided_r18 | |
+| every2_vs_transformer | 28 | 198 | -0.256 [-0.495, -0.079] * | -0.431 [-0.806, -0.155] * |
+| every2_vs_wiener | 28 | 198 | -0.461 [-0.702, -0.113] * | -0.600 [-0.950, -0.154] * |
+| every2_vs_gru_d | 28 | 198 | -0.324 [-0.556, -0.025] * | -0.596 [-0.954, -0.183] * |
+| every3_vs_transformer | 30 | 116 | -0.920 [-1.391, -0.409] * | -1.009 [-1.692, -0.302] * |
+| every3_vs_wiener | 30 | 116 | -0.548 [-0.809, -0.264] * | -0.678 [-1.128, -0.194] * |
+| every3_vs_gru_d | 30 | 116 | -1.002 [-1.473, -0.470] * | -1.216 [-1.932, -0.429] * |

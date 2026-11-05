@@ -2,6 +2,7 @@
 
 python scripts/summarize_seeds.py            # writes results/avocado_seeds/summary.md
 python scripts/summarize_seeds.py --root results/avocado_round2 --recal   # recalibrated metrics -> summary_recal.md
+Held-out runs named ``<model>_avocado_logo_<g>[_<clock>]<suffix>``; Round 2 uses ``--suffix _guided_r18``.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import numpy as np
 
 ROOT = Path("results/avocado_seeds")
 METRICS = "metrics_test.json"
+SUFFIX = ""
 COLS = [("mae", "MAE (d)"), ("crps", "CRPS"), ("coverage80", "80% cov."), ("width80", "80% width"),
         ("cindex", "C-index"), ("ece", "ECE")]  # fmt: skip
 LOGO_MODELS = ["direct_reg", "gru_d", "fpt_filter", "latent_sde", "latent_sde+clock_group", "latent_sde+clock_fixed"]
@@ -37,15 +39,17 @@ def ms(vals: list[float]) -> str:
 
 def logo_run(model: str, g: str) -> str:
     base, _, clock = model.partition("+")
-    return f"{base}_avocado_logo_{g}" + (f"_{clock}" if clock else "")
+    return f"{base}_avocado_logo_{g}" + (f"_{clock}" if clock else "") + SUFFIX
 
 
 def main() -> None:
-    global ROOT, METRICS
+    global ROOT, METRICS, SUFFIX
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=str(ROOT))
     ap.add_argument("--recal", action="store_true", help="read metrics_test_recal.json (scripts/recalibrate.py)")
+    ap.add_argument("--suffix", default="", help="run-name suffix of the held-out runs, e.g. _guided_r18")
     a = ap.parse_args()
+    SUFFIX = a.suffix
     ROOT, METRICS = Path(a.root), ("metrics_test_recal.json" if a.recal else "metrics_test.json")
     runs = load()
     seeds = sorted({p.parent.parent.name for p in ROOT.glob(f"seed*/*/{METRICS}")})
