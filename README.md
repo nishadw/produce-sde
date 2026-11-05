@@ -43,10 +43,18 @@ The SDE result is about calibration, robustness and transfer, not raw accuracy. 
 GRU + gap are the most accurate (CRPS 0.83 ± 0.14 and 0.84 ± 0.03, vs 0.99 for the latent SDE).
 
 On synthetic data the latent SDE's clock rates used to come out 14–24 % too fast; a guided posterior fixes that
-(now +2–10 %, σ 0.256 vs 0.25), but it is not yet switched on for the real-data runs.
+(now +2–10 %, σ 0.256 vs 0.25).
 
-Still open: the exact PDE likelihood loses to Monte Carlo on synthetic data and, over 5 seeds, on avocado too
-(CRPS 1.02 vs 0.92). The SDE models are near chance on PBC2, where the time scale is months rather than days.
+**Round 2 (avocado, 5 seeds).**
+* **Guided posterior:** brings the latent SDE's in-distribution CRPS from 0.99 to 0.91, or 0.85 ± 0.01 after
+  post-hoc recalibration, within noise of GRU + gap (0.82 ± 0.04).
+* **Exact vs MC:** with guidance, the exact PDE likelihood now beats Monte Carlo (0.90 vs 0.95).
+* **DINOv2 features:** worse than ResNet-18 for every sequence model.
+* **Cold storage:** guidance makes the intervals more over-confident there (T10 coverage 0.19 → 0.07).
+
+See `report/REPORT.md`, "Round 2".
+
+Still open: on synthetic data the exact PDE likelihood still loses to Monte Carlo (untested with guidance). The SDE models are near chance on PBC2, where the time scale is months rather than days.
 The FPT filter ignores the sensors on C-MAPSS. The non-avocado results are still single runs.
 
 ## SDE foundations (`src/nsde`)

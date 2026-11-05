@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "results" / "runs"
 SEEDS = ROOT / "results" / "avocado_seeds"
+ROUND2 = ROOT / "results" / "avocado_round2"
 OUT = ROOT / "report" / "figures"
 BEFORE = ROOT / "report" / "before_fix"
 
@@ -330,6 +331,64 @@ def copy_existing():
             shutil.copy(src, OUT / dst)
 
 
+def _vals(root: Path, run: str, key: str = "crps", split: str = "overall") -> np.ndarray:
+    v = [
+        json.loads(p.read_text()).get(split, {}).get(key, float("nan"))
+        for p in sorted(root.glob(f"seed*/{run}/metrics_test.json"))
+    ]
+    return np.array([x for x in v if x == x], float)
+
+
+def fig_round2():
+    """Round 2: which change moved the latent SDE, and what DINOv2 did to every other model (in-distribution CRPS)."""
+    if not ROUND2.exists():
+        return
+    fig, (a, b) = plt.subplots(1, 2, figsize=(11, 3.9), gridspec_kw={"width_ratios": [1, 1.25]})
+    abl = [
+        ("Round 1 (ResNet-18, unguided)", SEEDS, "latent_sde_avocado", GRAY),
+        ("+ DINOv2 only", ROUND2, "latent_sde_avocado_dino_unguided", GRAY),
+        ("+ guidance only", ROUND2, "latent_sde_avocado_guided_r18", BLUE),
+        ("+ both (Round 2)", ROUND2, "latent_sde_avocado", BLUE),
+    ][::-1]
+    ys = np.arange(len(abl))
+    vals = [_vals(r, run) for _, r, run, _ in abl]
+    ms = [mean_sd(v) for v in vals]
+    a.barh(ys, [m for m, _ in ms], xerr=[s for _, s in ms], color=[c for *_, c in abl], height=0.6,
+           error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})  # fmt: skip
+    seed_dots(a, ys, vals, horizontal=True)
+    for y, (m, sd) in zip(ys, ms, strict=True):
+        a.text(m + sd + 0.01, y, f" {m:.2f}", va="center", fontsize=8, color=INK2)
+    best = mean_sd(_vals(SEEDS, "gru_gap_avocado"))[0]
+    a.axvline(best, color=INK2, lw=1, ls="--")
+    a.set_ylim(-0.95, len(abl) - 0.5)
+    a.text(best, -0.8, "GRU + gap, Round 1 ", fontsize=8, color=INK2, va="center", ha="right")
+    a.set_yticks(ys, [n for n, *_ in abl])
+    a.set_xlim(0.6, 1.1)
+    a.grid(axis="y", visible=False)
+    a.set_title("Latent SDE: CRPS (days) ↓ by change", loc="left")
+
+    models = ["gru_gap", "ode_rnn", "gru_d", "fpt_filter", "discrete_surv", "latent_ode"]
+    w = 0.38
+    xs = np.arange(len(models))
+    for i, (lab, root, c) in enumerate([("ResNet-18 (Round 1)", SEEDS, GRAY), ("DINOv2 (Round 2)", ROUND2, ORANGE)]):
+        v = [_vals(root, f"{m}_avocado") for m in models]
+        mm = [mean_sd(x) for x in v]
+        pos = xs + (i - 0.5) * (w + 0.02)
+        b.bar(pos, [m for m, _ in mm], w, yerr=[s for _, s in mm], color=c, label=lab,
+              error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})  # fmt: skip
+        seed_dots(b, pos, v)
+    b.set_xticks(xs, [NAMES[m].replace(" (ours)", "").replace(" ", "\n", 1) for m in models], fontsize=8.5)
+    b.set_ylim(0.6, 1.2)
+    b.grid(axis="x", visible=False)
+    b.legend(loc="upper left", fontsize=8.5, ncol=2)
+    b.set_title("Other models: CRPS (days) ↓ by photo features", loc="left")
+    fig.suptitle("Round 2 · avocado test set · mean ± std over 5 seeds (dots: each seed)", x=0.01, ha="left",
+                 fontweight="bold")  # fmt: skip
+    fig.tight_layout()
+    fig.savefig(OUT / "round2_ablation.png")
+    plt.close(fig)
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     style()
@@ -339,6 +398,7 @@ def main():
     fig_photo_count()
     fig_pbc2_fix()
     fig_synthetic_fix()
+    fig_round2()
     copy_existing()
     print("wrote", sorted(p.name for p in OUT.glob("*.png")))
 

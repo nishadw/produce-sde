@@ -46,6 +46,10 @@
 - 2026-11-04: `bash run_umiacs.sh r2` submitted: 45 jobs 8167177-8167237 (r2_0..r2_44) + summary 8167238 (afterany)
   -> results/avocado_round2/summary.md + summary_recal.md. Then: update report + professor summary page.
 
+- 2026-11-05: Round 2 done (46/46 COMPLETED). Report section "Round 2", figure round2_ablation.png, plan results.
+  Guidance = the win (CRPS 0.99 -> 0.90; 0.85 recalibrated); DINOv2 hurt sequence models; T10 coverage worse with
+  guidance; exact PDE now beats MC. Comparison script: /fs/class-projects/fall2026/cmsc498z/nwajge/scratch/round2/cmp.py.
+
 ## Next
 - Rerun E1-E4 (avocado) with model.posterior_guidance=true model.event_mean=log_mean, if the user wants it.
 - Remaining ~2-nat gap: full h-transform via backward filtering on the PDE grid.
