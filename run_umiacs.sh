@@ -5,7 +5,7 @@
 #   bash run_umiacs.sh setup            # sbatch job: venv + editable install + CPU tests (run once)
 #   bash run_umiacs.sh data             # sbatch job: download avocado if incomplete, check / prepare every dataset
 #   bash run_umiacs.sh all              # submit every experiment with dependencies, then the summary job
-#   bash run_umiacs.sh e1|e2|e3|e4|e5|e6|synthetic|summary      # one stage
+#   bash run_umiacs.sh e1|e2|e3|e4|e6|synthetic|summary      # one stage
 #   bash run_umiacs.sh all --local      # run everything sequentially in this shell (no sbatch)
 #
 # setup and data run inside sbatch jobs too (no compute on submission nodes); `--local` runs any stage inline.
@@ -22,15 +22,12 @@
 #   e2         exact filter vs PDE-ELBO vs Monte Carlo likelihoods    results/runs/{fpt_filter,latent_sde}_*
 #   e3         leave-one-storage-group-out transfer + clock ablation results/runs/*_logo_*
 #   e4         sampling-frequency and photo-count ablations          results/runs/*_every{2,3}, metrics_by_n_obs.json
-#   e5         second domains: PBC2 and C-MAPSS                      results/runs/<model>_{pbc2,cmapss}
 #   e6         A2SL multimodal avocados (photos + microwave)         results/runs/<model>_a2sl
 #   summary    results/summary.md
 #   seeds      independent multi-seed rerun of e1-e4 (avocado only)  results/avocado_seeds/, summary.md there
 #   Round 2 (docs/round2_plan.md):
-#   features2  DINOv2 ViT-B/14 feature cache + linear probe vs ResNet-18  data/features/, results/feature_probe.md
-#   r2-pilot   one seed of the round-2 latent SDE and GRU-D (catch errors before r2)  results/avocado_round2_pilot/
-#   r2         e1-e4 again, 5 seeds: DINOv2 features for every model, guided posterior for the latent SDE,
-#              plus the latent-SDE ablations (guidance alone, features alone)   results/avocado_round2/
+#   r2         guided-posterior latent SDE (ResNet-18 features), 5 seeds: in-distribution + 3 held-out groups
+#              results/avocado_round2/
 #   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -85,15 +82,12 @@ stage_data() {
   local n_img=0; [[ -d data/avocado/images ]] && n_img=$(find data/avocado/images -name '*.jpg' | wc -l)
   [[ $n_img -ge 14710 ]] || "$PY" scripts/download_avocado.py --workers 8 || die "avocado download incomplete; rerun data"
   "$PY" -c "from ripen.data.avocado import load_avocado; n = len(load_avocado('data/avocado')); print('avocado items', n); assert n == 478"
-  [[ -f data/pbc2/pbc2_cleaned.csv ]] || curl -fsSL --retry 3 --max-time 600 -o data/pbc2/pbc2_cleaned.csv --create-dirs https://raw.githubusercontent.com/chl8856/Dynamic-DeepHit/master/data/pbc2_cleaned.csv
-  if [[ ! -f data/cmapss/train_FD001.txt ]]; then mkdir -p data/cmapss && curl -fsSL --retry 3 --max-time 1800 -o data/cmapss/CMAPSSData.zip https://data.nasa.gov/docs/legacy/CMAPSSData.zip && (cd data/cmapss && unzip -qo CMAPSSData.zip); fi
   [[ -d data/a2sl ]] && "$PY" scripts/ingest_a2sl.py || echo "note: data/a2sl not present; e6 will be skipped"
   # the loaders read the feature caches, so extract them before the splits
   [[ -f data/features/avocado_resnet18.npz ]] || "$PY" scripts/extract_features.py --data avocado --root data/avocado --out data/features/avocado_resnet18.npz --device "$( [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && echo cuda || echo cpu )"
   if [[ -d data/a2sl && ! -f data/features/a2sl_resnet18.npz ]]; then "$PY" scripts/extract_features.py --data a2sl --out data/features/a2sl_resnet18.npz --device cpu; fi
   "$PY" scripts/make_splits.py data=avocado
   for g in T10 T20 Tamb; do "$PY" scripts/make_splits.py data=avocado splits.mode=logo splits.held_out=$g; done
-  "$PY" scripts/make_splits.py data=pbc2; "$PY" scripts/make_splits.py data=cmapss
 }
 
 stage_synthetic() { JOBS[synthetic]=$(submit synthetic "$PY scripts/synthetic_recovery.py"); }
@@ -124,12 +118,6 @@ stage_e4() {
   # photo-count curves come from e1's metrics_by_n_obs.json; evaluating daily-trained models on sparser visits:
   local deps=(); for m in gru_d latent_ode latent_sde; do [[ -n "${JOBS[e1_$m]:-}" && "${JOBS[e1_$m]}" != local ]] && deps+=("${JOBS[e1_$m]}"); done
   JOBS[e4_eval]=$(submit e4-eval "for m in gru_d latent_ode latent_sde; do for k in 2 3; do $PY scripts/evaluate.py results/runs/\${m}_avocado --every \$k; done; done" "${deps[@]}")
-}
-
-stage_e5() {
-  for d in pbc2 cmapss; do for m in direct_reg discrete_surv gru_d ode_rnn latent_ode latent_sde fpt_filter; do
-    JOBS[e5_${m}_$d]=$(submit "e5-$m-$d" "$PY scripts/train.py model=$m data=$d horizon=\$( [[ $d == pbc2 ]] && echo 180 || echo 40 ) ++model.use_stages=false")
-  done; done
 }
 
 stage_e6() {
@@ -168,22 +156,11 @@ stage_seeds() {
   fi
 }
 
-# Round 2: same runs as `seeds`, with the DINOv2 cache for every model and the guided posterior for the latent SDE.
-R2_FEATS=data/features/avocado_dinov2_vitb14.npz
+# Round 2: the latent SDE with the guided posterior (E0 fix), ResNet-18 features, in-distribution + held-out groups.
 R2_GUIDE="model.posterior_guidance=true model.event_mean=log_mean"
-r2_args() {  # r2_args "<seeds-style args>" -> round-2 args
-  local a="$1 data.features_file=$R2_FEATS"
-  [[ "$1" == "model=latent_sde"* ]] && a="$a $R2_GUIDE"
-  echo "$a"
-}
-R2_RUNS=()
-for args in "${AVOCADO_RUNS[@]}"; do R2_RUNS+=("$(r2_args "$args")"); done
-# ablations, latent SDE only: guidance alone (ResNet-18) and DINOv2 alone (unguided), in-distribution + LOGO
-R2_RUNS+=("model=latent_sde $R2_GUIDE run_name=latent_sde_avocado_guided_r18"
-  "model=latent_sde data.features_file=$R2_FEATS run_name=latent_sde_avocado_dino_unguided")
+R2_RUNS=("model=latent_sde $R2_GUIDE run_name=latent_sde_avocado_guided_r18")
 for g in T10 T20 Tamb; do
-  R2_RUNS+=("model=latent_sde +experiment=logo splits.held_out=$g $R2_GUIDE run_name=latent_sde_avocado_logo_${g}_guided_r18"
-    "model=latent_sde +experiment=logo splits.held_out=$g data.features_file=$R2_FEATS run_name=latent_sde_avocado_logo_${g}_dino_unguided")
+  R2_RUNS+=("model=latent_sde +experiment=logo splits.held_out=$g $R2_GUIDE run_name=latent_sde_avocado_logo_${g}_guided_r18")
 done
 
 # seed_jobs TAG ROOT run-args... : one job per run looping over RIPEN_SEEDS, then a summary job (afterany)
@@ -203,15 +180,6 @@ seed_jobs() {
   fi
 }
 
-stage_features2() {
-  local dev; dev='$( [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] && echo cuda || echo cpu )'
-  JOBS[features2]=$(submit features2 "[[ -f $R2_FEATS ]] || $PY scripts/extract_features.py --data avocado --root data/avocado --backbone dinov2_vitb14 --standardize --out $R2_FEATS --device $dev; $PY scripts/probe_features.py data/features/avocado_resnet18.npz $R2_FEATS")
-}
-
-stage_r2_pilot() {
-  RIPEN_SEEDS=1 seed_jobs r2pilot results/avocado_round2_pilot "$(r2_args model=latent_sde)" "$(r2_args model=gru_d)"
-}
-
 stage_r2() { seed_jobs r2 results/avocado_round2 "${R2_RUNS[@]}"; }
 
 stage_recal() {
@@ -229,22 +197,19 @@ case "$STAGE" in
   pipeline)
     [[ $LOCAL -eq 1 ]] && die "pipeline is the sbatch chain; use setup/data/all --local instead"
     self_job setup 02:00:00; self_job data 04:00:00 "${JOBS[setup]}"; AFTER+=("${JOBS[data]}")
-    stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e5; stage_e6; stage_summary ;;
+    stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e6; stage_summary ;;
   synthetic) stage_synthetic ;;
   e1) stage_e1 ;;
   e2) stage_e2 ;;
   e3) stage_e3 ;;
   e4) stage_e4 ;;
-  e5) stage_e5 ;;
   e6) stage_e6 ;;
   summary) stage_summary ;;
   seeds) stage_seeds ;;
   seeds-summary) "$PY" scripts/summarize_seeds.py ;;
-  features2) stage_features2 ;;
-  r2-pilot) stage_r2_pilot ;;
   r2) stage_r2 ;;
   recal) stage_recal ;;
-  all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e5; stage_e6; stage_summary ;;
+  all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e6; stage_summary ;;
   *) die "unknown stage $STAGE" ;;
 esac
 [[ $LOCAL -eq 1 ]] || { echo "submitted:"; for k in "${!JOBS[@]}"; do echo "  $k -> ${JOBS[$k]}"; done | sort; }

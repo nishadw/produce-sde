@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 
 from ripen.data.avocado import load_avocado
-from ripen.data.features import BACKBONE_DIMS, extract_features, save_feature_cache, standardize_cache
+from ripen.data.features import BACKBONE_DIMS, extract_features, save_feature_cache
 from ripen.data.stevens import load_manifest
 
 
@@ -25,7 +25,6 @@ def main() -> None:
     ap.add_argument("--backbone", default="resnet18", choices=sorted(BACKBONE_DIMS))
     ap.add_argument("--batch-size", type=int, default=64)
     ap.add_argument("--device", default="cpu")
-    ap.add_argument("--standardize", action="store_true", help="z-score each dimension over all photos")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     if args.data == "avocado":
@@ -45,8 +44,6 @@ def main() -> None:
         paths = sorted(set(paths) - set(missing))
     print(f"{len(items)} items, {len(paths)} photos -> {args.backbone} on {args.device}")
     feats = extract_features(paths, args.backbone, args.batch_size, args.device)
-    if args.standardize:
-        feats = standardize_cache(feats)
     save_feature_cache(args.out, feats)
     print(f"wrote {args.out}")
 

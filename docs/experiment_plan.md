@@ -12,7 +12,6 @@ Claims (see `docs/research_plan.md`, `docs/theory.md`):
 | P3 | The Arrhenius clock is identifiable and transfers to an unseen storage temperature | E3 |
 | E1 | Beats the two published point-estimate models on the avocado data while keeping censored fruit | E1 |
 | E4 | Calibration and sharpness vs visit spacing and photo count | E4 |
-| E5 | Same model on PBC2 (clinical) and C-MAPSS (degradation) | E5 |
 | E6 | Multimodal photos + microwave (A2SL) | E6 |
 
 ## 0. One-time setup
@@ -28,11 +27,10 @@ Data (no new collection; public or provided only):
 # Mendeley avocado set (CC BY 4.0): download https://data.mendeley.com/datasets/3xd9n945v8/1 and unzip into data/avocado
 # A2SL microwave drops: place the three raw folders under data/a2sl/ as in docs/data_a2sl.md, then
 python scripts/ingest_a2sl.py            # HEIC -> JPEG, manifests, scan caches (a few minutes)
-bash run_umiacs.sh data                  # PBC2 + C-MAPSS downloads, split files, ResNet-18 feature caches
+bash run_umiacs.sh data                  # split files, ResNet-18 feature caches
 ```
 
-Expected: avocado 478 fruit (three groups, 9–27 % right-censored per group); A2SL 15 fruit (4 tracked for 7 visits);
-PBC2 312 patients; C-MAPSS FD001 100 engines.
+Expected: avocado 478 fruit (three groups, 9–27 % right-censored per group); A2SL 15 fruit (4 tracked for 7 visits).
 
 ## 1. Milestone 1 — fake fruit (no real data)
 
@@ -62,7 +60,6 @@ What each stage runs:
 | `e2` | `fpt_filter` (exact) vs latent SDE with `model.event_likelihood=pde` vs `mc`, on avocado and synthetic | `results/runs/{fpt_filter,latent_sde}_{avocado,synthetic}_*/` |
 | `e3` | leave one storage group out × {direct_reg, gru_d, latent_sde}; latent SDE with `clock=group` and `clock=fixed` | `results/runs/*_logo_*` |
 | `e4` | every-2/every-3-day training for gru_d / latent_ode / latent_sde; daily-trained models evaluated on sparser test visits | `results/runs/*_every{2,3}`, `metrics_test_every{2,3}.json` |
-| `e5` | six models on `data=pbc2` (horizon 180 months) and `data=cmapss` (horizon 40 inspections) | `results/runs/<model>_{pbc2,cmapss}/` |
 | `e6` | gru_d and latent SDE on `data=a2sl`; latent SDE with the feature decoder | `results/runs/*_a2sl*` |
 | `summary` | `scripts/summarize.py` after everything | `results/summary.md` |
 

@@ -4,6 +4,10 @@
 Read in order: this file → `research_plan.md` → `theory.md` → `literature_review.md` / `venue_scan.md` →
 `data_*.md` → `experiment_plan.md`.*
 
+> **Scope change (2026-11-05):** the project is now avocado-only. The second-domain datasets (PBC2, C-MAPSS)
+> mentioned below were removed from the code, data and report; this document keeps them as planning history.
+
+
 ## 1. The problem, stated carefully
 
 An **item** (one avocado, one patient, one engine) is observed at **visits** `t_0 < t_1 < … < t_n`. At each

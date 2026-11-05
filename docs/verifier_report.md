@@ -88,7 +88,7 @@ sparser-visit ablation. ✔ known-set changed to `(lo ≥ h) | (hi ≤ h)`. ✔ 
    (true 0.25), z₀ 1.19 ± 0.155 (true 1.2 ± 0.15), fresh-CDF error 0.028. Brute-force gap at `ds = 0.02` is
    0.00–0.07 nats (the earlier "1 nat" figure came from an item with the tail bug).
 
-Also found while running the real data end to end (not by the verifier): with monthly units (PBC2) the default
+Also found while running the real data end to end (not by the verifier): with monthly units (a liver-disease dataset, since removed) the default
 clock was ~20× too fast, the density was entirely absorbed before an "alive" visit, and the backward pass
 produced NaN gradients. ✔ emission floor + collapse guard in the filter; ✔ `clock_kwargs.rate_ref: auto`
 initialises the clock from the median event time (`DatasetInfo.median_event_time`).

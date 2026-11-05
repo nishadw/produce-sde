@@ -3,6 +3,10 @@
 *The play, chosen 2026-10-20 after the venue scan in `docs/venue_scan.md` and the review in
 `docs/literature_review.md`. Read this before anything else in `docs/`.*
 
+> **Scope change (2026-11-05):** the project is now avocado-only. The second-domain datasets (PBC2, C-MAPSS)
+> mentioned below were removed from the code, data and report; this document keeps them as planning history.
+
+
 ## 1. The one-paragraph pitch
 
 Many things are followed until they stop being usable: a fruit until it spoils, a patient until a disease

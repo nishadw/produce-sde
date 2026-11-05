@@ -1,17 +1,42 @@
+# ruff: noqa  (one-off generator for report/Produce_Spoilage_SDE_Results.docx; runs in a python-docx venv)
 import json
 from pathlib import Path
 import numpy as np, matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
 S = Path("/fs/class-projects/fall2026/cmsc498z/nwajge/ripen/results/avocado_seeds")
+
+
 def vals(run):
-    return np.array([json.loads(p.read_text())["overall"]["mae"] for p in sorted(S.glob(f"seed*/{run}/metrics_test.json"))])
-groups = [("T10", "Tested at 10 °C\n(cool storage)"), ("T20", "Tested at 20 °C"), ("Tamb", "Tested at\nroom temperature")]
-series = [("Our model: speed follows temperature", "", "#2a78d6"),
-          ("Same model, separate speed per group", "_clock_group", "#b4b2ab"),
-          ("Same model, one fixed speed", "_clock_fixed", "#6f6d68")]
-plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False, "axes.edgecolor": "#cccccc",
-                     "axes.grid": True, "grid.color": "#e6e5e0", "axes.axisbelow": True, "legend.frameon": False})
+    return np.array(
+        [json.loads(p.read_text())["overall"]["mae"] for p in sorted(S.glob(f"seed*/{run}/metrics_test.json"))]
+    )
+
+
+groups = [
+    ("T10", "Tested at 10 °C\n(cool storage)"),
+    ("T20", "Tested at 20 °C"),
+    ("Tamb", "Tested at\nroom temperature"),
+]
+series = [
+    ("Our model: speed follows temperature", "", "#2a78d6"),
+    ("Same model, separate speed per group", "_clock_group", "#b4b2ab"),
+    ("Same model, one fixed speed", "_clock_fixed", "#6f6d68"),
+]
+plt.rcParams.update(
+    {
+        "font.size": 10,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.edgecolor": "#cccccc",
+        "axes.grid": True,
+        "grid.color": "#e6e5e0",
+        "axes.axisbelow": True,
+        "legend.frameon": False,
+    }
+)
 fig, ax = plt.subplots(figsize=(7.2, 3.6))
 w = 0.26
 for i, (lab, suf, c) in enumerate(series):

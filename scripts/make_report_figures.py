@@ -239,45 +239,6 @@ def fig_photo_count():
     plt.close(fig)
 
 
-def fig_pbc2_fix():
-    before = {
-        "latent ODE": metrics("", path=BEFORE / "latent_ode_pbc2.json"),
-        "GRU-D": {"cindex": 0.5, "mae": float("nan")},  # NaN predictions before the fix (C reported as 0.5)
-    }
-    after = {"latent ODE": metrics("latent_ode_pbc2"), "GRU-D": metrics("gru_d_pbc2")}
-    ref = {n: metrics(f"{m}_pbc2") for n, m in [("ODE-RNN", "ode_rnn"), ("discrete survival", "discrete_surv")]}
-    names = ["latent ODE", "GRU-D"]
-    fig, ax = plt.subplots(figsize=(7.5, 3.4))
-    w = 0.36
-    b1 = ax.bar(
-        [i - w / 2 - 0.01 for i in range(2)], [before[n]["cindex"] for n in names], w, color=GRAY, label="before fix"
-    )
-    b2 = ax.bar(
-        [i + w / 2 + 0.01 for i in range(2)], [after[n]["cindex"] for n in names], w, color=BLUE, label="after fix"
-    )
-    label_bars(ax, list(b1) + list(b2), "{:.2f}", horizontal=False)
-    # reference lines stop short of their labels; the two reference labels sit above / below their lines
-    for (n, r), dy in zip(ref.items(), (-10, 6), strict=True):
-        if r:
-            ax.hlines(r["cindex"], -0.6, 1.5, color=INK2, lw=1, ls=":")
-            ax.annotate(
-                f"{n} {r['cindex']:.2f}", (1.52, r["cindex"]), xytext=(0, dy), textcoords="offset points",
-                va="center", fontsize=8, color=INK2,
-            )  # fmt: skip
-    ax.hlines(0.5, -0.6, 1.5, color=INK2, lw=1, ls="--")
-    ax.text(1.52, 0.5, "chance", va="center", fontsize=8, color=INK2)
-    ax.set_xticks(range(2), names)
-    ax.set_xlim(-0.6, 2.2)
-    ax.set_ylim(0.4, 1.0)
-    ax.set_ylabel("C-index on PBC2 test ↑")
-    ax.grid(axis="x", visible=False)
-    ax.legend(loc="upper left")
-    ax.set_title("E5 · PBC2 (liver disease) before and after the two bug fixes", loc="left")
-    fig.tight_layout()
-    fig.savefig(OUT / "e5_pbc2_fix.png")
-    plt.close(fig)
-
-
 def fig_synthetic_fix():
     """E0: fitted rates and sigma, unguided vs guided posterior, against the simulator's truth."""
     paths = {
@@ -340,50 +301,38 @@ def _vals(root: Path, run: str, key: str = "crps", split: str = "overall") -> np
 
 
 def fig_round2():
-    """Round 2: which change moved the latent SDE, and what DINOv2 did to every other model (in-distribution CRPS)."""
+    """Round 2: the latent SDE before (Round 1) and after the guided posterior (in-distribution, held-out groups)."""
     if not ROUND2.exists():
         return
-    fig, (a, b) = plt.subplots(1, 2, figsize=(11, 3.9), gridspec_kw={"width_ratios": [1, 1.25]})
-    abl = [
-        ("Round 1 (ResNet-18, unguided)", SEEDS, "latent_sde_avocado", GRAY),
-        ("+ DINOv2 only", ROUND2, "latent_sde_avocado_dino_unguided", GRAY),
-        ("+ guidance only", ROUND2, "latent_sde_avocado_guided_r18", BLUE),
-        ("+ both (Round 2)", ROUND2, "latent_sde_avocado", BLUE),
-    ][::-1]
-    ys = np.arange(len(abl))
-    vals = [_vals(r, run) for _, r, run, _ in abl]
-    ms = [mean_sd(v) for v in vals]
-    a.barh(ys, [m for m, _ in ms], xerr=[s for _, s in ms], color=[c for *_, c in abl], height=0.6,
-           error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})  # fmt: skip
-    seed_dots(a, ys, vals, horizontal=True)
-    for y, (m, sd) in zip(ys, ms, strict=True):
-        a.text(m + sd + 0.01, y, f" {m:.2f}", va="center", fontsize=8, color=INK2)
-    best = mean_sd(_vals(SEEDS, "gru_gap_avocado"))[0]
-    a.axvline(best, color=INK2, lw=1, ls="--")
-    a.set_ylim(-0.95, len(abl) - 0.5)
-    a.text(best, -0.8, "GRU + gap, Round 1 ", fontsize=8, color=INK2, va="center", ha="right")
-    a.set_yticks(ys, [n for n, *_ in abl])
-    a.set_xlim(0.6, 1.1)
-    a.grid(axis="y", visible=False)
-    a.set_title("Latent SDE: CRPS (days) ↓ by change", loc="left")
-
-    models = ["gru_gap", "ode_rnn", "gru_d", "fpt_filter", "discrete_surv", "latent_ode"]
+    fig, (a, b) = plt.subplots(1, 2, figsize=(10, 3.6), gridspec_kw={"width_ratios": [1, 1.6]})
+    pairs = [("Round 1 (unguided)", SEEDS, "", GRAY), ("guided posterior", ROUND2, "_guided_r18", BLUE)]
+    for i, (_, root, suf, c) in enumerate(pairs):
+        v = _vals(root, f"latent_sde_avocado{suf}")
+        m, sd = mean_sd(v)
+        a.bar(i, m, 0.6, yerr=sd, color=c, error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})
+        seed_dots(a, [i], [v])
+        a.text(i, m + sd + 0.01, f"{m:.2f}", ha="center", va="bottom", fontsize=8, color=INK2)
+    a.set_xticks([0, 1], [p[0] for p in pairs])
+    a.set_ylim(0.6, 1.15)
+    a.grid(axis="x", visible=False)
+    a.set_title("In-distribution CRPS (days) ↓", loc="left")
+    groups = ["T10", "T20", "Tamb"]
     w = 0.38
-    xs = np.arange(len(models))
-    for i, (lab, root, c) in enumerate([("ResNet-18 (Round 1)", SEEDS, GRAY), ("DINOv2 (Round 2)", ROUND2, ORANGE)]):
-        v = [_vals(root, f"{m}_avocado") for m in models]
+    for i, (lab, root, suf, c) in enumerate(pairs):
+        v = [_vals(root, f"latent_sde_avocado_logo_{g}{suf}", "mae") for g in groups]
         mm = [mean_sd(x) for x in v]
-        pos = xs + (i - 0.5) * (w + 0.02)
-        b.bar(pos, [m for m, _ in mm], w, yerr=[s for _, s in mm], color=c, label=lab,
+        pos = np.arange(3) + (i - 0.5) * (w + 0.02)
+        b.bar(pos, [m for m, _ in mm], w, yerr=[s_ for _, s_ in mm], color=c, label=lab,
               error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})  # fmt: skip
         seed_dots(b, pos, v)
-    b.set_xticks(xs, [NAMES[m].replace(" (ours)", "").replace(" ", "\n", 1) for m in models], fontsize=8.5)
-    b.set_ylim(0.6, 1.2)
+        for x, (m, sd) in zip(pos, mm, strict=True):
+            b.text(x, m + sd, f"{m:.1f}", ha="center", va="bottom", fontsize=8, color=INK2)
+    b.set_xticks(range(3), [f"held out: {g}" for g in groups])
     b.grid(axis="x", visible=False)
-    b.legend(loc="upper left", fontsize=8.5, ncol=2)
-    b.set_title("Other models: CRPS (days) ↓ by photo features", loc="left")
-    fig.suptitle("Round 2 · avocado test set · mean ± std over 5 seeds (dots: each seed)", x=0.01, ha="left",
-                 fontweight="bold")  # fmt: skip
+    b.legend(loc="upper right", fontsize=8.5)
+    b.set_title("MAE on a held-out storage group (days) ↓", loc="left")
+    fig.suptitle("Round 2 · latent SDE with the guided posterior · mean ± std over 5 seeds (dots: each seed)", x=0.01,
+                 ha="left", fontweight="bold")  # fmt: skip
     fig.tight_layout()
     fig.savefig(OUT / "round2_ablation.png")
     plt.close(fig)
@@ -396,7 +345,6 @@ def main():
     fig_transfer()
     fig_sampling()
     fig_photo_count()
-    fig_pbc2_fix()
     fig_synthetic_fix()
     fig_round2()
     copy_existing()

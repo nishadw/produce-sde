@@ -54,3 +54,11 @@
 - Rerun E1-E4 (avocado) with model.posterior_guidance=true model.event_mean=log_mean, if the user wants it.
 - Remaining ~2-nat gap: full h-transform via backward filtering on the PDE grid.
 - Exact-vs-MC gap (E2), C-MAPSS filter emission model, PBC2 time scale, post-hoc recalibration.
+
+## 2026-11-05: scope cut to avocado only
+- Removed PBC2 + C-MAPSS (loaders, configs, tests, e5 stage, splits, report E5, docs/data_second_domain.md) and
+  DINOv2 (feature-extraction path, --standardize, probe script, features2/r2-pilot stages, Round 2 dino runs).
+- Round 2 is now the guided latent SDE (ResNet-18) only: results/avocado_round2 (4 runs x 5 seeds); `bash run_umiacs.sh r2`.
+- Archived (not deleted) outside the repo: /fs/class-projects/fall2026/cmsc498z/nwajge/scratch/archive_removed_2026-11-05
+  (pbc2/cmapss data + runs, DINOv2 cache + runs, pilot). Delete it when sure.
+- Tests: 65 passed + smoke_all ok (job 8175981). Planning docs keep a scope note instead of being rewritten.

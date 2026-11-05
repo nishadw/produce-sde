@@ -9,8 +9,8 @@
 over *when* it first hits a boundary. The likelihood is exact: it comes from the Kolmogorov PDEs, not from
 path simulation.**
 
-The running example is fruit spoilage from daily photos. The same code runs on liver-disease survival (PBC2)
-and jet-engine failure (NASA C-MAPSS). Built in JAX / Equinox / Diffrax.
+The application is avocado spoilage from daily photos (and, on a small set, microwave scans). Built in JAX /
+Equinox / Diffrax.
 
 ## Methods
 
@@ -48,14 +48,12 @@ On synthetic data the latent SDE's clock rates used to come out 14–24 % too fa
 **Round 2 (avocado, 5 seeds).**
 * **Guided posterior:** brings the latent SDE's in-distribution CRPS from 0.99 to 0.91, or 0.85 ± 0.01 after
   post-hoc recalibration, within noise of GRU + gap (0.82 ± 0.04).
-* **Exact vs MC:** with guidance, the exact PDE likelihood now beats Monte Carlo (0.90 vs 0.95).
-* **DINOv2 features:** worse than ResNet-18 for every sequence model.
 * **Cold storage:** guidance makes the intervals more over-confident there (T10 coverage 0.19 → 0.07).
 
 See `report/REPORT.md`, "Round 2".
 
-Still open: on synthetic data the exact PDE likelihood still loses to Monte Carlo (untested with guidance). The SDE models are near chance on PBC2, where the time scale is months rather than days.
-The FPT filter ignores the sensors on C-MAPSS. The non-avocado results are still single runs.
+Still open: the exact PDE likelihood loses to Monte Carlo (not yet rerun with guidance), and cold-storage intervals
+are too narrow for every model.
 
 ## SDE foundations (`src/nsde`)
 
@@ -93,7 +91,7 @@ lecture/     graduate lecture on neural SDEs (slides, notes, demo)
 ## Data
 
 The avocado photos come from Mendeley ([10.17632/3xd9n945v8.1](https://doi.org/10.17632/3xd9n945v8.1), CC BY 4.0):
-478 fruit, 14,710 photos. The other datasets are A2SL microwave scans, PBC2 and NASA C-MAPSS. Raw data is not
+478 fruit, 14,710 photos. The second dataset is A2SL microwave scans + photos of avocados. Raw data is not
 committed; see [`data/README.md`](data/README.md).
 
 ## Lecture

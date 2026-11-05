@@ -367,7 +367,7 @@ class LatentDynamics(eqx.Module):
             z = y[:D]
             fp = m.f_prior(z, kappa_)
             # latent ODE: the path is the prior ODE from z0 ~ q(z0); a posterior drift would have no KL cost
-            # (sigma = 0) and, without stage labels to anchor R (PBC2), drives R off the PDE grid
+            # (sigma = 0) and, without stage labels to anchor R, drives R off the PDE grid
             fq = m.f_post(t, z, ctx_, kappa_, loc_) if m.kind == "sde" else fp
             active = t <= t_now_
             # clock on the generator: calendar-time diffusion is sqrt(kappa) * sigma (physiological units)
