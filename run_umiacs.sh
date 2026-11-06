@@ -33,6 +33,9 @@
 #   r2b        the rest for the guided model: labels-only, MC likelihood, clock ablation, sparse photos, and
 #              A2SL (guided latent SDE, GRU-D, FPT filter)   results/avocado_round2/
 #   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
+#   Mango (report/MANGO_REPORT.md):
+#   mango-data ingest data/mango (manifests + microwave cache) and photo features
+#   mango      every model x {rgb, mw, both, samd}, 6-fold CV x 3 seeds, CPU   results/mango/, summary.md there
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck disable=SC1091
@@ -233,6 +236,27 @@ stage_nb_sweep() {
 }
 stage_nb() { nb_runs; RIPEN_MEM=32G RIPEN_GPU=none JAX_PLATFORMS=cpu seed_jobs nb results/baselines2 "${NB_RUNS[@]}"; }
 
+# Mango study (docs: report/MANGO_REPORT.md): CPU jobs, one per model x input setting, each looping 3 seeds x 6 folds
+MANGO_MODELS=(${RIPEN_MANGO_MODELS:-gru_gap gru_d ode_rnn neural_cde transformer latent_sde latent_ode fpt_filter})
+MANGO_SETTINGS=(${RIPEN_MANGO_SETTINGS:-rgb mw both samd})
+stage_mango_data() {
+  JOBS[mango_data]=$(RIPEN_GPU=none submit mango-data \
+    "$PY scripts/ingest_mango.py && $PY scripts/extract_features.py --data mango --out data/features/mango_resnet18.npz")
+}
+stage_mango() {
+  local deps=() m s
+  JOBS[mango_refs]=$(RIPEN_GPU=none submit mango-refs "$PY scripts/mango_cv.py --model refs --seeds 1 2 3"); deps+=("${JOBS[mango_refs]}")
+  for m in "${MANGO_MODELS[@]}"; do for s in "${MANGO_SETTINGS[@]}"; do
+    JOBS[mango_${m}_$s]=$(RIPEN_GPU=none submit "mango-$m-$s" \
+      "JAX_PLATFORMS=cpu $PY scripts/mango_cv.py --model $m --setting $s --seeds 1 2 3")
+    deps+=("${JOBS[mango_${m}_$s]}")
+  done; done
+  JOBS[mango_summary]=$(sbatch --parsable --job-name=ripen-mango-summary --output="results/logs/%x-%j.out" --time=00:30:00 \
+    --cpus-per-task=1 --mem=4G --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" \
+    --dependency=afterany:$(IFS=:; echo "${deps[*]}") \
+    --wrap="cd '$RIPEN_ROOT' && source '$RIPEN_ENV/bin/activate' && $PY scripts/mango_summary.py")
+}
+
 stage_recal() {
   JOBS[recal]=$(submit recal "$PY scripts/recalibrate.py results/avocado_seeds && $PY scripts/summarize_seeds.py --recal")
 }
@@ -263,6 +287,8 @@ case "$STAGE" in
   nb-sweep) stage_nb_sweep ;;
   nb) stage_nb ;;
   recal) stage_recal ;;
+  mango-data) stage_mango_data ;;
+  mango) stage_mango ;;
   all) stage_synthetic; stage_e1; stage_e2; stage_e3; stage_e4; stage_e6; stage_summary ;;
   *) die "unknown stage $STAGE" ;;
 esac

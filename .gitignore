@@ -34,3 +34,4 @@ multirun/
 results/avocado_round2/seed*/
 results/baselines2/seed*/
 results/baselines2_sweep/seed*/
+results/mango/seed*/

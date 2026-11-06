@@ -36,7 +36,9 @@ def _seq(encoder):
 def _latent(kind):
     def make(cfg, info, key):
         kw = {k: v for k, v in cfg.items() if k not in ("name", "horizon")}
-        return LatentDynamics(info.feat_dim, len(info.groups), cfg["horizon"], info.t_max, key=key, kind=kind, **kw)
+        # snapshot data (every item one visit at t = 0) has t_max = 0; the posterior solve needs a non-empty grid
+        t_max = max(info.t_max, 1.0)
+        return LatentDynamics(info.feat_dim, len(info.groups), cfg["horizon"], t_max, key=key, kind=kind, **kw)
 
     return make
 

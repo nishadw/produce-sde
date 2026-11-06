@@ -1,0 +1,62 @@
+{
+  "splits": {
+    "train": [
+      "mango03",
+      "mango04",
+      "mango06",
+      "mango07",
+      "mango08",
+      "mango09",
+      "mango10",
+      "mango11",
+      "mango13",
+      "mango18",
+      "mango19",
+      "mango21",
+      "mango22",
+      "mango23",
+      "mango24",
+      "mango26",
+      "mango28",
+      "mango32",
+      "mango34",
+      "mango35",
+      "mango36",
+      "mango41",
+      "mango42",
+      "mango43",
+      "mango44",
+      "mango45",
+      "mango46",
+      "mango47",
+      "mango48",
+      "mango52",
+      "mango53",
+      "mango54"
+    ],
+    "val": [
+      "mango05",
+      "mango12",
+      "mango15",
+      "mango20",
+      "mango29",
+      "mango33",
+      "mango50",
+      "mango51"
+    ],
+    "test": [
+      "mango01",
+      "mango02",
+      "mango16",
+      "mango17",
+      "mango30",
+      "mango31",
+      "mango37",
+      "mango40"
+    ]
+  },
+  "mode": "cv",
+  "fold": 2,
+  "n_folds": 6,
+  "data": "mango"
+}
