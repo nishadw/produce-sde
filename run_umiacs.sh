@@ -237,6 +237,7 @@ stage_nb_sweep() {
 stage_nb() { nb_runs; RIPEN_MEM=32G RIPEN_GPU=none JAX_PLATFORMS=cpu seed_jobs nb results/baselines2 "${NB_RUNS[@]}"; }
 
 # Mango study (docs: report/MANGO_REPORT.md): CPU jobs, one per model x input setting, each looping 3 seeds x 6 folds
+# (one process per seed: XLA's CPU code cache grows with every fold's freshly-jitted train step)
 MANGO_MODELS=(${RIPEN_MANGO_MODELS:-gru_gap gru_d ode_rnn neural_cde transformer latent_sde latent_ode fpt_filter})
 MANGO_SETTINGS=(${RIPEN_MANGO_SETTINGS:-rgb mw both samd})
 stage_mango_data() {
@@ -248,7 +249,7 @@ stage_mango() {
   JOBS[mango_refs]=$(RIPEN_GPU=none submit mango-refs "$PY scripts/mango_cv.py --model refs --seeds 1 2 3"); deps+=("${JOBS[mango_refs]}")
   for m in "${MANGO_MODELS[@]}"; do for s in "${MANGO_SETTINGS[@]}"; do
     JOBS[mango_${m}_$s]=$(RIPEN_GPU=none submit "mango-$m-$s" \
-      "JAX_PLATFORMS=cpu $PY scripts/mango_cv.py --model $m --setting $s --seeds 1 2 3")
+      "for seed in 1 2 3; do JAX_PLATFORMS=cpu $PY scripts/mango_cv.py --model $m --setting $s --seeds \$seed || exit 1; done")
     deps+=("${JOBS[mango_${m}_$s]}")
   done; done
   JOBS[mango_summary]=$(sbatch --parsable --job-name=ripen-mango-summary --output="results/logs/%x-%j.out" --time=00:30:00 \

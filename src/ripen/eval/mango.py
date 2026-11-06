@@ -32,10 +32,15 @@ from ..data.schema import SPOILED_STAGE, Item
 from .metrics import censored_log_score, compute_metrics
 
 
+@eqx.filter_jit
+def _predict_cdf(model, batch, key):
+    return model.predict_cdf(batch, key)
+
+
 def predict(model, items: list[Item], info: DatasetInfo, key, batch_size: int = 64):
     """CDFs for snapshot items with stage labels removed. -> (F, lo, hi) with ``hi = inf`` if right-censored."""
     plain = strip_stages(items)
-    pred = eqx.filter_jit(lambda m, b, k: m.predict_cdf(b, k))
+    pred = _predict_cdf  # module level: a jit built per call recompiles every fold and leaks compiled code on CPU
     Fs, lo, hi = [], [], []
     for s in range(0, len(plain), batch_size):
         b = collate(plain[s : s + batch_size], info, n_obs="all")
