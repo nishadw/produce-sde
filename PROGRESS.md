@@ -23,9 +23,17 @@ Current state as of 2026-11-05. The day-by-day log up to this point is in git hi
 - **Removed on 2026-11-05:** PBC2, C-MAPSS and DINOv2, plus the old `slurm/` scripts (replaced by `run_umiacs.sh`).
   - Their data and runs are archived in `/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/archive_removed_2026-11-05`.
 
+## In progress (2026-11-06): mango study
+- Data arrived 2026-11-06 in `data/mango/` (raw, gitignored). Destructive design: 48 fruit, 6 cut per study day
+  (0, 2, ..., 14); microwave scans every other day until the cut; photos and firmness on the cut day only.
+  Spoiled = senescent (<= 1 N), seen only on days 12-14.
+- Code: `scripts/ingest_mango.py`, `ripen.data.mango`, `ripen.train.samd` (SAMD distillation), `ripen.eval.mango`,
+  `scripts/mango_cv.py`, `scripts/mango_summary.py`. 6 fast tests in `tests/test_mango.py`.
+- Jobs: `bash run_umiacs.sh mango` -> 8218025-8218057 (8 models x {rgb, mw, both, samd} + references, CPU),
+  summary 8218058 -> `results/mango/summary.md`. Then write `report/MANGO_REPORT.md`.
+
 ## Next steps, in order
-1. **Mango data (arriving 2026-11-06).** Need its format before writing a loader: photos or other sensors, how often,
-   storage temperatures, how spoilage/ripeness is labelled, and how many fruit are tracked to the end.
+1. **Mango study** (above): finish, report.
 2. **Fix cold storage.** At T10 every learned model is 5.5–8.5 days off with coverage ≤ 0.16, while the Wiener process
    gets 3.0 days / 74 %. Options: a prior or hierarchy on the activation energy so clock uncertainty widens the
    intervals off-range; or a hybrid that leans on the per-fruit trend (Wiener-style) away from the training temperatures.
