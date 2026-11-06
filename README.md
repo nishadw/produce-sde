@@ -52,6 +52,11 @@ transformer). See `report/REPORT.md`, "Round 2b", "New baselines" and "Paired si
 
 Still open: cold-storage intervals are too narrow for every learned model.
 
+**Mango study** (`report/MANGO_REPORT.md`, `bash run_umiacs.sh mango`): 48 mangoes cut open on days 0–14, microwave
+scans every other day, photos on the cut day. Every model × {photo, microwave, both, photo-only distilled from both
+with SAMD}, scored identically. Microwave clearly beats photo; SAMD does not make the photo-only models better than a
+simple photo → age → batch-curve reference; nothing tells fruit of the same age apart.
+
 ## SDE foundations (`src/nsde`)
 
 - **Gradient methods benchmark.** Backprop is exact but its memory grows with step count. Checkpointing is
@@ -81,7 +86,7 @@ Each experiment is one Hydra command, e.g.
 src/ripen/   data loaders, models (latent SDE/ODE, fpt_pde, clocks, 12 baselines), trainer, metrics
 src/nsde/    SDE solver with gradient-method switch; Black–Scholes / Heston pricers
 configs/     Hydra configs        scripts/  train, evaluate, summarize, figures
-report/      results report (REPORT.md) and the one-page Word summary (report/brief/)
+report/      results report (REPORT.md), the mango study (MANGO_REPORT.md), one-page Word summary (report/brief/)
 docs/        theory, literature, data notes, plans
 lecture/     graduate lecture on neural SDEs (slides, notes, demo)
 ```
