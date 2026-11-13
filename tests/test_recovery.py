@@ -1,0 +1,170 @@
+"""The fake-fruit milestone: a label-only latent SDE with a linear drift, a constant diffusion and a per-group
+clock must recover what the model identifies (docs/background/theory.md P3): the *ratios* of the group rates, the noise
+level, the first-passage distribution, and — with two temperatures — the Arrhenius activation energy.
+
+The latent is pinned to stage units by fixing the ordinal thresholds at 2, 3, 4, 5, with the z0 prior in the same
+units (bottom stage, as for the grid filter). The link scale is fixed and sharp because the simulator's labels are
+hard floors of the latent. The latent SDE runs with the guided posterior and the predictive event term: without
+them its ELBO leaves a variational gap that shrinks as the clock speeds up, and every rate came out 8-32% too fast
+(docs/archive/verifier_report.md, "Rate-recovery bias"; the exact likelihood peaks at the true rates).
+"""
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+import pytest
+
+from ripen.data import SyntheticConfig, collate, dataset_info, make_splits, select, simulate
+from ripen.data.synthetic import analytic_spoilage_cdf
+from ripen.models import LatentDynamics
+from ripen.train import TrainConfig, train
+
+# guided posterior, predictive event term, z0 prior in stage units (bottom stage, as for the grid filter)
+GUIDED = {"posterior_guidance": True, "event_mean": "log_mean", "z0_prior_mean": 1.5, "z0_prior_std": 0.5}
+
+
+@pytest.mark.slow
+def test_latent_sde_recovers_rates_sigma_and_fpt():
+    scfg = SyntheticConfig(n_items=180, t_max=24.0, sigma=0.25, seed=11)
+    items = simulate(scfg)
+    sp = make_splits(items, seed=0)
+    tr, va, te = select(items, sp["train"]), select(items, sp["val"]), select(items, sp["test"])
+    info = dataset_info(items)
+    model = LatentDynamics(
+        info.feat_dim,
+        len(info.groups),
+        horizon=24,
+        t_max=info.t_max,
+        key=jax.random.PRNGKey(0),
+        latent_dim=1,
+        hidden=32,
+        visit_dim=16,
+        use_images=False,
+        use_stages=True,
+        drift_kind="linear",
+        sigma_kind="const",
+        clock="group",
+        clock_kwargs={"init_rate": 0.4},
+        fixed_thresholds=True,
+        link_scale=0.1,
+        learn_link_scale=False,
+        n_sub=2,
+        n_train_samples=4,
+        n_samples=128,
+        init_sigma=0.4,
+        **GUIDED,
+    )
+    tcfg = TrainConfig(epochs=14, batch_size=32, lr=2e-2, patience=14, n_obs_mode="random", seed=0)
+    model, hist = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
+    assert hist[-1]["train_loss"] < hist[0]["train_loss"]
+
+    rates = {g: float(r) for g, r in zip(info.groups, np.asarray(model.clock.rates()), strict=True)}
+    for g in ("T10", "Tamb"):
+        ratio, true_ratio = rates[g] / rates["T20"], scfg.rates[g] / scfg.rates["T20"]
+        assert abs(ratio - true_ratio) / true_ratio < 0.15, (g, ratio, true_ratio)
+    for g, true in scfg.rates.items():  # the absolute rates too (-2..+13% over 5 seeds)
+        assert abs(rates[g] - true) / true < 0.2, (g, rates[g], true)
+    sigma = float(np.asarray(model.sigma(jnp.zeros(1)))[0])
+    assert abs(sigma - scfg.sigma) / scfg.sigma < 0.5, sigma
+
+    fresh = [it.prefix(1) for it in te if it.storage == "T20"]
+    F = np.asarray(model.predict_cdf(collate(fresh, info, n_obs=1), jax.random.PRNGKey(3))).mean(0)
+    t = np.arange(F.shape[0], dtype=float)
+    truth = np.mean(
+        [analytic_spoilage_cdf(t, it.meta["z0"], 0.473, scfg.calendar_sigma(0.473)) for it in fresh], axis=0
+    )
+    # 0.09-0.18 over 5 seeds; a ~2-nat variational gap remains (the guidance looks one label ahead), so the bound is
+    # looser than the exact grid filter's 0.15
+    assert np.max(np.abs(F - truth)) < 0.25, np.max(np.abs(F - truth))
+
+
+@pytest.mark.slow
+def test_arrhenius_clock_recovers_activation_energy():
+    """Two temperatures, rates following an Arrhenius law with E_a = 50 kJ/mol: the clock recovers E_a within 15%."""
+    from ripen.models.clock import R_GAS
+
+    ea, k_ref, t_ref = 50_000.0, 0.473, 20.0
+    temps = {"T10": 10.0, "T20": 20.0}
+    rates = {
+        g: k_ref * float(np.exp(-ea / R_GAS * (1 / (c + 273.15) - 1 / (t_ref + 273.15)))) for g, c in temps.items()
+    }
+    scfg = SyntheticConfig(n_items=160, t_max=28.0, sigma=0.25, rates=rates, temps=temps, seed=5)
+    items = simulate(scfg)
+    sp = make_splits(items, seed=0)
+    tr, va = select(items, sp["train"]), select(items, sp["val"])
+    info = dataset_info(items)
+    model = LatentDynamics(
+        info.feat_dim,
+        len(info.groups),
+        horizon=24,
+        t_max=info.t_max,
+        key=jax.random.PRNGKey(0),
+        latent_dim=1,
+        hidden=32,
+        visit_dim=16,
+        use_images=False,
+        use_stages=True,
+        drift_kind="linear",
+        sigma_kind="const",
+        clock="arrhenius",
+        clock_kwargs={"ea_j_mol": 30_000.0, "rate_ref": 0.3, "t_ref_c": t_ref},
+        fixed_thresholds=True,
+        link_scale=0.1,
+        learn_link_scale=False,
+        n_sub=2,
+        n_train_samples=4,
+        n_samples=32,
+        init_sigma=0.4,
+        **GUIDED,
+    )
+    # E_a starts at 30 kJ/mol and moves in log space, ~0.5 to travel: 14 epochs (~56 steps) stopped it at 35-44
+    tcfg = TrainConfig(epochs=30, batch_size=32, lr=2e-2, patience=30, n_obs_mode="random", seed=0)
+    model, _ = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
+    ea_hat = float(model.clock.ea)
+    assert abs(ea_hat - ea) / ea < 0.15, ea_hat  # E_a depends on the rate ratio only, which is identified
+
+
+@pytest.mark.slow
+def test_exact_filter_recovers_rates_sigma_and_fpt():
+    """The grid filter has no variational gap: with the thresholds fixed it recovers the absolute rates, sigma,
+    and the fresh-fruit spoilage CDF."""
+    from ripen.models import FirstPassageFilter
+
+    scfg = SyntheticConfig(n_items=180, t_max=24.0, sigma=0.25, seed=11)
+    items = simulate(scfg)
+    sp = make_splits(items, seed=0)
+    tr, va, te = select(items, sp["train"]), select(items, sp["val"]), select(items, sp["test"])
+    info = dataset_info(items)
+    model = FirstPassageFilter(
+        info.feat_dim,
+        len(info.groups),
+        horizon=24,
+        key=jax.random.PRNGKey(0),
+        use_images=False,
+        use_stages=True,
+        drift_kind="linear",
+        sigma_kind="const",
+        clock="group",
+        clock_kwargs={"init_rate": 0.4},
+        fixed_thresholds=True,
+        link_scale=0.1,
+        learn_link_scale=False,
+        init_sigma=0.4,
+        z0_mean=1.5,
+        z0_std=0.5,
+    )
+    tcfg = TrainConfig(epochs=12, batch_size=32, lr=3e-2, patience=12, n_obs_mode="random", seed=0)
+    model, hist = train(model, tr, va, info, tcfg, jax.random.PRNGKey(1), log=lambda *_: None)
+    assert hist[-1]["train_loss"] < hist[0]["train_loss"]
+    rates = {g: float(r) for g, r in zip(info.groups, np.asarray(model.clock.rates()), strict=True)}
+    for g, true in scfg.rates.items():
+        assert abs(rates[g] - true) / true < 0.2, (g, rates[g], true)
+    sigma = float(np.asarray(model.sigma_r(jnp.zeros(()))))
+    assert abs(sigma - scfg.sigma) / scfg.sigma < 0.4, sigma
+    fresh = [it.prefix(1) for it in te if it.storage == "T20"]
+    F = np.asarray(model.predict_cdf(collate(fresh, info, n_obs=1), jax.random.PRNGKey(3))).mean(0)
+    t = np.arange(F.shape[0], dtype=float)
+    truth = np.mean(
+        [analytic_spoilage_cdf(t, it.meta["z0"], 0.473, scfg.calendar_sigma(0.473)) for it in fresh], axis=0
+    )
+    assert np.max(np.abs(F - truth)) < 0.15, np.max(np.abs(F - truth))

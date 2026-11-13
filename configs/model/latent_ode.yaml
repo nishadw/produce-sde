@@ -1,0 +1,31 @@
+# Latent ODE: deterministic latent dynamics; the spoilage distribution comes from q(z0) only.
+name: latent_ode
+horizon: ${horizon}
+latent_dim: 4
+hidden: 64
+visit_dim: 32
+width: 32
+encoder: gru
+use_images: true
+use_stages: true
+structured: true
+event_likelihood: mc       # not pde: with sigma = 0 the backward equation is pure transport, survival is a step in r
+                           # and the event term gives q(z0) no gradient
+drift_kind: mlp
+monotone_drift: true
+clock: arrhenius
+clock_kwargs: {ea_j_mol: 50000.0, rate_ref: auto, t_ref_c: 20.0}   # auto: 3.5 stage units per median event time
+fixed_thresholds: false
+n_sub: 2
+method: checkpoint          # backprop | checkpoint | adjoint
+solver: euler
+brownian: virtual_tree
+n_samples: 64
+n_train_samples: 2
+fpt_beta: 0.1
+kl_weight: 1.0
+spoil_weight: 1.0
+pde_grid: 160              # r-grid points for the backward Kolmogorov solve
+pde_ds: 0.02               # physiological-time step
+pde_steps: 2500            # table covers s in [0, pde_ds * pde_steps]
+pde_r_min: -1.0

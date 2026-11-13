@@ -1,0 +1,6 @@
+# Wiener degradation process on the stage history: per-fruit random drift, Arrhenius clock, Gaussian noise.
+name: wiener
+horizon: ${horizon}
+clock: arrhenius
+clock_kwargs: {ea_j_mol: 50000.0, rate_ref: auto, t_ref_c: 20.0}
+obs_weight: 1.0

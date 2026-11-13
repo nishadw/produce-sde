@@ -1,0 +1,28 @@
+{
+  "splits": {
+    "train": [
+      "avo02",
+      "avo03",
+      "avo11",
+      "avo06",
+      "avo07",
+      "avo10",
+      "avo12",
+      "avo14",
+      "avo15"
+    ],
+    "val": [
+      "avo05",
+      "avo09"
+    ],
+    "test": [
+      "avo01",
+      "avo04",
+      "avo08",
+      "avo13"
+    ]
+  },
+  "mode": "a2sl_view_cv",
+  "fold": 0,
+  "data": "a2sl"
+}

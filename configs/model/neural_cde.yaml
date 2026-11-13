@@ -1,0 +1,9 @@
+# Neural CDE (Kidger et al. 2020) over the interpolated photo features -> discrete survival head.
+name: neural_cde
+horizon: ${horizon}
+hidden: 32
+visit_dim: 16
+group_dim: 4
+substeps: 4
+use_images: true
+use_stages: false

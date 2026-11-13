@@ -1,0 +1,32 @@
+# Python / tooling
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+!foundations/lecture/build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+node_modules/
+multirun/
+*.eqx
+*.npz
+
+# Data never enters git (lab data is not public). See data/README.md for how to get it.
+/data/*
+!/data/README.md
+
+# Run outputs: model checkpoints, predictions, logs, regenerated summaries and report charts
+/outputs/
+
+# Per-machine settings for run_umiacs.sh
+.ripen.env
+
+# Lecture build artifacts
+foundations/lecture/build/*.pdf
+foundations/experiments/demo_video/_cache/
