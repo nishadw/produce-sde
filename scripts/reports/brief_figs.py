@@ -91,8 +91,8 @@ fig.savefig(HERE / "br_models.png", dpi=200)
 plt.close(fig)
 
 # ---------------------------------------------------------------- chart 2: teaching a photo-only model
-LAB = {"photo": "Photo only", "reset_only_photoT": "Take-turns,\nno teacher", "kd": "CAML", "samd": "SAMD",
-       "ours": "Lab method", "ours_rkd": "Lab + RKD", "teacher": "Teacher\n(needs scanner)"}  # fmt: skip
+LAB = {"photo": "Photo only", "reset_only_photoT": "Take-turns\ncontrol", "kd": "CAML-style\nKD", "samd": "SAMD",
+       "ours": "Lab method", "ours_rkd": "Lab method\n+ RKD", "teacher": "Teacher\n(needs scanner)"}  # fmt: skip
 fig, ax = plt.subplots(figsize=(7.2, 2.8))
 meths = [k for k in AML if all(f"{m}|{k}" in N["aml"] for m in MODELS)]
 for j, (m, lab) in enumerate(MODELS.items()):
