@@ -37,7 +37,7 @@ Average per cut day (6 fruit each):
 **Spoiled = senescent.** It appears only on days 12 and 14. Each fruit is seen spoiled-or-not on **one** day, so this
 is *current-status* data: no fruit has an observed spoilage day. Two consequences shape everything below:
 
-1. **Labels.** All 30 fruit cut on days 0–10 were not senescent, so we assume the batch did not start spoiling before
+1. **Labels.** All 36 fruit cut on days 0–10 were not senescent, so we assume the batch did not start spoiling before
    day 10. A fruit senescent on day 12 or 14 then spoiled in (10, 12] or (10, 14]; one not senescent when cut on day
    *d* is right-censored at *d*. Relative to a scan on day *s* these become intervals of *days from now*. The
    microwave scans before the cut therefore carry real "how many days" information. The photo, taken on the cut day,

@@ -24,7 +24,7 @@ LABEL = {
     "pkt": "probabilistic KT (PKT, frozen teacher)",
     "sp": "similarity preserving (SP, frozen teacher)",
     "samd": "SAMD (teacher reset each round)",
-    "ours": "lab method: reset + shared head + KD",
+    "ours": "lab method: reset + shared predictor + KD",
     "ours_rkd": "reset + RKD",
     "ours_pkt": "reset + PKT",
     "ours_sp": "reset + SP",

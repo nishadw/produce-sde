@@ -124,7 +124,7 @@ for lead, txt in [
     ),
     (
         "Needs fewer photos: ",
-        "with a photo only every third day it is 1.4 days off, against 1.9 to 2.6 days for every other model, including the transformer. With fewer photos it beats every model we tested, and by more than chance could explain.",
+        "with a photo only every third day it had the lowest error of every model tested (1.4 days off, against 1.9 to 2.6). These sparse-photo numbers are provisional: a bug that treated some spoiled fruit as never spoiling was fixed on 14 Nov 2026 and they are being recomputed.",
     ),
     (
         "Weak spot: ",

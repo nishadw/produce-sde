@@ -195,7 +195,7 @@ para(
     "learned, during training, from a teacher that also saw the scans. The methods differ in three choices: is the "
     "teacher fixed or rebuilt each round, does the student take over the teacher's predictor (every layer after the "
     "encoder), and what the student "
-    "copies. All are ported from the lab's RepDistiller code (train_student.py, distiller_zoo/).",
+    "copies. SAMD follows Shen et al.; the others are ported from the lab's RepDistiller code (train_student.py, distiller_zoo/).",
     size=9.5,
 )
 DESC = [

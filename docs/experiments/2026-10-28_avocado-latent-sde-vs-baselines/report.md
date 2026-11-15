@@ -166,6 +166,8 @@ black-box baselines, which can match them on interpolation.
 
 ### E4 · Fewer photos
 
+> **Correction (2026-11-14).** These every-2nd/3rd-day numbers were computed with a bug in `subsample_visits`: when a fruit first looked spoiled on a day the sparser schedule skipped, it was treated as never spoiling, which affected about 55 % of the test fruit that do spoil. The bug is fixed (`tests/test_subsample.py`) and the affected runs need to be rerun (`bash run_umiacs.sh sparse`). Treat these numbers as provisional until this table is updated.
+
 Models retrained with a photo every 2nd or 3rd day:
 
 ![E4 sampling](figures/e4_sampling.png)
@@ -244,6 +246,8 @@ and `summary_recal.md`; Round 1 recalibrated: [`outputs/avocado/round1/summary_r
   Round 2b, below.
 
 ### Round 2b · Every experiment with the guided posterior
+
+> **Correction (2026-11-14).** These every-2nd/3rd-day numbers were computed with a bug in `subsample_visits`: when a fruit first looked spoiled on a day the sparser schedule skipped, it was treated as never spoiling, which affected about 55 % of the test fruit that do spoil. The bug is fixed (`tests/test_subsample.py`) and the affected runs need to be rerun (`bash run_umiacs.sh sparse`). Treat these numbers as provisional until this table is updated.
 
 Same model as Round 2 (guided posterior, predictive event term, ResNet-18 features), 5 seeds each, in
 [`outputs/avocado/round2/`](tables/round2_summary.md). Unrecalibrated unless marked.

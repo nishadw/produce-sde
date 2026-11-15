@@ -61,8 +61,8 @@ METHODS: dict[str, tuple[DistillSpec, bool]] = {
     "rkd": (DistillSpec(beta=1.0, rep="rkd"), False),
     "pkt": (DistillSpec(beta=1.0, rep="pkt"), False),
     "sp": (DistillSpec(beta=1.0, rep="sp"), False),
-    "samd": (DistillSpec(beta=1.0), True),  # SAMD: reset + shared head + feature MSE
-    "reset_only": (DistillSpec(), True),  # control: reset schedule + shared head, no distillation term
+    "samd": (DistillSpec(beta=1.0), True),  # SAMD: reset + shared predictor + feature MSE
+    "reset_only": (DistillSpec(), True),  # control: reset schedule + shared predictor, no distillation term
     "ours": (DistillSpec(gamma=0.1, alpha=0.9, temp=4.0), True),  # lab run_our_steering_distill*.sh: reset + kd
     "ours_rkd": (DistillSpec(beta=1.0, rep="rkd"), True),
     "ours_pkt": (DistillSpec(beta=1.0, rep="pkt"), True),

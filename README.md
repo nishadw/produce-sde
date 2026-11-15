@@ -34,7 +34,7 @@ probability score (lower is better for both).
 
 | Date | Study | Headline |
 |---|---|---|
-| 2026-10-28 | [Avocado: latent SDE vs 12 baselines](docs/experiments/2026-10-28_avocado-latent-sde-vs-baselines/report.md) (public set, 478 fruit, 5 seeds) | At an unseen storage temperature the Arrhenius clock cuts MAE 1.5–2.4× vs ablated clocks; with a photo only every 3rd day the latent SDE has CRPS 0.97 vs 1.08 for the latent ODE and 1.5–2.7 for every other model; 80 % intervals cover 94 % (SDE) vs 64 % (latent ODE). A small transformer is best in-distribution. |
+| 2026-10-28 | [Avocado: latent SDE vs 12 baselines](docs/experiments/2026-10-28_avocado-latent-sde-vs-baselines/report.md) (public set, 478 fruit, 5 seeds) | At an unseen storage temperature the Arrhenius clock cuts MAE 1.5–2.4× vs ablated clocks; with a photo only every 3rd day the latent SDE had the best CRPS (provisional: being recomputed after a 2026-11-14 censoring fix); 80 % intervals cover 94 % (SDE) vs 64 % (latent ODE). A small transformer is best in-distribution. |
 | 2026-11-06 | [Mango: photo vs microwave](docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md) (48 lab fruit) | Microwave scans clearly beat photos; no model beats a known-age reference. |
 | 2026-11-10 | [Avocado: microwave scanner views](docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md) | The 0°, 120° and 240° rotation views beat 60°, 180° and 300° (14 of 16 paired tests). |
 | 2026-11-12 | [Views × time-series models × AML](docs/experiments/2026-11-12_views-time-series-models-and-aml/report.md) | Latent ODE is the best model on both fruits. Teacher-student gains on avocados come from the training schedule, not the scanner. |

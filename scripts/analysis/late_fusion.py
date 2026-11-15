@@ -73,7 +73,7 @@ def fold_mode(a) -> None:
                     out = sd / f"{a.model}_{a.input}_viewfuse-{kind}" / fold
                     out.mkdir(parents=True, exist_ok=True)
                     np.savez_compressed(out / f"predictions_{split}.npz", **{**zs[0], "F": fuse(Fs, kind)})
-                    (out / "metrics_test.json").touch()
+                    (out / "metrics_test.json").write_text("{}")  # marks the fold done; metrics come from predictions
         print(f"{sd.name}: fused {len(a.views)} views of {a.model}_{a.input}")
 
 

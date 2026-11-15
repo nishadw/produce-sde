@@ -173,7 +173,7 @@ findings = [
     ("Best avocado model: ", "the latent ODE beat the latent SDE with every input except the 240° view alone "
      f"(photo + 0/120/240°: {a('latent_ode_photo_mw_0+120+240')} vs {a('latent_sde_photo_mw_0+120+240')}). [Table 1]"),
     ("Teaching a photo model, avocados: ", "the methods that rebuild the teacher from the student each round "
-     f"(SAMD, the lab's method and its variants) beat the photo-only model, by up to a third (latent SDE: "
+     f"(SAMD, the lab's method and its variants) scored better than the photo-only model, by up to a third (latent SDE: "
      f"{a('latent_sde_photo', src=AML)} to {a('latent_sde_' + best_sde, src=AML)}). Methods with a fixed teacher did not "
      "help. [Chart 2, Table 2]"),
     ("That gain does not come from the scanner: ", "the same take-turns training with no teaching term at all does as "

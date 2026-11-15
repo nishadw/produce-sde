@@ -33,6 +33,7 @@
 #   r2b        the rest for the guided model: labels-only, MC likelihood, clock ablation, sparse photos, and
 #              A2SL (guided latent SDE, GRU-D, FPT filter)   outputs/avocado/round2/
 #   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
+#   sparse     rerun only the photo-every-2nd/3rd-day runs of e4, seeds, r2b and nb (RIPEN_RUN_FILTER=sampling_every)
 #   Mango (docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md):
 #   mango-data ingest data/mango (manifests + microwave cache) and photo features
 #   mango      every model x {rgb, mw, both, samd}, 6-fold CV x 3 seeds, CPU   outputs/mango/, summary.md there
@@ -154,7 +155,8 @@ for k in 2 3; do for m in gru_d latent_ode latent_sde; do AVOCADO_RUNS+=("model=
 
 stage_seeds() {
   local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
-  for args in "${AVOCADO_RUNS[@]}"; do
+  local runs; mapfile -t runs < <(filter_runs "${AVOCADO_RUNS[@]}")
+  for args in "${runs[@]}"; do
     local data="data=avocado"; [[ " $args " == *" data="* ]] && data=""
     local cmd="fail=0; for s in $seeds; do $PY scripts/run/train.py $data $args seed=\$s +train.seed=\$s 'out_dir=outputs/avocado/round1/seed'\$s'/\${run_name}' || fail=1; done; exit \$fail"
     JOBS[seeds_$i]=$(submit "seeds-$i" "$cmd"); [[ "${JOBS[seeds_$i]}" != local ]] && deps+=("${JOBS[seeds_$i]}"); i=$((i + 1))
@@ -212,9 +214,13 @@ nb_runs() {
   done
 }
 
+# keep only run-args matching RIPEN_RUN_FILTER (an extended regex), if set
+filter_runs() { if [[ -z "${RIPEN_RUN_FILTER:-}" ]]; then printf "%s\n" "$@"; else printf "%s\n" "$@" | grep -E -- "$RIPEN_RUN_FILTER" || true; fi; }
+
 # seed_jobs TAG ROOT run-args... : one job per run looping over RIPEN_SEEDS, then a summary job (afterany)
 seed_jobs() {
   local tag="$1" root="$2"; shift 2
+  local runs; mapfile -t runs < <(filter_runs "$@"); set -- "${runs[@]}"
   local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
   for args in "$@"; do
     local data="data=avocado"; [[ " $args " == *" data="* ]] && data=""
@@ -351,6 +357,15 @@ stage_recal() {
   JOBS[recal]=$(submit recal "$PY scripts/analysis/recalibrate.py outputs/avocado/round1 && $PY scripts/analysis/summarize_seeds.py --recal")
 }
 
+# Rerun only the photo-every-2nd/3rd-day runs (e4, round1, round2, baselines), then recalibrate and re-summarise.
+stage_sparse() {
+  export RIPEN_RUN_FILTER="sampling_every"
+  stage_e4; stage_seeds; stage_r2b; stage_nb
+  local deps=(); for k in "${!JOBS[@]}"; do [[ $k == seeds_[0-9]* && "${JOBS[$k]}" != local ]] && deps+=("${JOBS[$k]}"); done
+  JOBS[sparse_recal]=$(submit sparse-recal "$PY scripts/analysis/recalibrate.py outputs/avocado/round1 && $PY scripts/analysis/summarize_seeds.py && $PY scripts/analysis/summarize_seeds.py --recal" "${deps[@]}")
+  unset RIPEN_RUN_FILTER
+}
+
 stage_summary() {
   local deps=(); for j in "${JOBS[@]}"; do [[ "$j" != local ]] && deps+=("$j"); done
   JOBS[summary]=$(submit summary "$PY scripts/analysis/summarize.py" "${deps[@]}")
@@ -377,6 +392,7 @@ case "$STAGE" in
   nb-sweep) stage_nb_sweep ;;
   nb) stage_nb ;;
   recal) stage_recal ;;
+  sparse) stage_sparse; stage_summary ;;
   mango-data) stage_mango_data ;;
   mango) stage_mango ;;
   mango-views) stage_mango_views ;;

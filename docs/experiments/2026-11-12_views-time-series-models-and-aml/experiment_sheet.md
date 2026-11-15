@@ -62,8 +62,8 @@ per-pair sweeps (today's cache averages all 45 pairs).
 | A0 / A1 | photo-only baseline / teacher (ceiling) | | done (avocado) |
 | A2 | CAML KD on the forecast, alpha 0.9 T 4 and alpha 0.5 T 1 | RepDistiller `kd` | done (avocado) |
 | A3 | feature matching (FitNet) | RepDistiller `hint` | done (avocado) |
-| A4 | SAMD: reset + shared head + feature MSE | Shen et al., ICML 2023 (≈ lab "ours" without the KD term) | done (avocado) |
-| A5 | **lab "ours" exactly**: reset + shared head + KD term, gamma 0.1 alpha 0.9 T 4 | `run_our_steering_distill*.sh` | new |
+| A4 | SAMD: reset + shared predictor + feature MSE | Shen et al., ICML 2023 (≈ lab "ours" without the KD term) | done (avocado) |
+| A5 | **lab "ours" exactly**: reset + shared predictor + KD term, gamma 0.1 alpha 0.9 T 4 | `run_our_steering_distill*.sh` | new |
 | A6-A8 | relational losses on the representation: RKD, PKT, SP (frozen teacher and with reset) | RepDistiller zoo | new |
 | A9 | partial modality: separate unpaired photo-only loss, weight mu, teacher trained on scanned visits only | RepDistiller `partial` | new |
 | A10 | TMC-style teacher: one branch per view + fusion; reset copies the student's photo branch in, zeroes the rest; MSE on the fused forecast | TMC `myKD` | stretch |
