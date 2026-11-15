@@ -9,7 +9,7 @@ Current state as of 2026-11-05. Running log of what was done and where it stands
   on ResNet-18 features, with post-hoc recalibration. Round 2 is complete: every experiment uses this model.
   - In-distribution CRPS 0.85 ± 0.01 (recal.): tied with GRU + gap / ODE-RNN / GRU-D; transformer significantly better (0.74).
   - Held-out temperature MAE: 5.5 (T10), 1.1 (T20), 1.4 (ambient) days; Arrhenius clock 1.5–2.4× better than ablations.
-  - Sparse photos (every 3rd day): CRPS 0.97 vs 1.5–2.7 for every other model; significant.
+  - Sparse photos (every 3rd day): CRPS 0.97 vs 1.5–2.7 for every other model; significant (provisional: computed before the 2026-11-14 `subsample_visits` fix, being rerun).
   - Cold storage: Wiener degradation process wins (3.0 days, 74 % coverage).
 - **Results:**
   - Round 1, unguided, every model: `outputs/avocado/round1/summary.md`, and `summary_recal.md` for the recalibrated version.

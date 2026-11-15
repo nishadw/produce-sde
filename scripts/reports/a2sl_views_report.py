@@ -148,7 +148,7 @@ doc.add_heading("Results", level=1)
 para("Table 1", after=2)
 cols = ["time", "photo", "mw_0+120+240", "mw_60+180+300", "photo_mw_0+120+240", "photo_mw_all"]
 rows = [
-    ("Forecast score", "How much probability the model gave to the day the avocado really spoiled. Lower is "
+    ("Forecast score", "How little probability the model gave to the day the avocado really spoiled. Lower is "
      "better.", [v(c, "log") for c in cols]),
     ("Days off", "Average gap between the predicted and real spoilage day.", [v(c, "mae") for c in cols]),
     ("Forecast score, corrected", "The same score after a correction step that makes the stated ranges honest, "

@@ -214,8 +214,8 @@ nb_runs() {
   done
 }
 
-# keep only run-args matching RIPEN_RUN_FILTER (an extended regex), if set
-filter_runs() { if [[ -z "${RIPEN_RUN_FILTER:-}" ]]; then printf "%s\n" "$@"; else printf "%s\n" "$@" | grep -E -- "$RIPEN_RUN_FILTER" || true; fi; }
+# keep only run-args matching RIPEN_RUN_FILTER (an extended regex), if set; no args -> no output (not one empty run)
+filter_runs() { [[ $# -eq 0 ]] && return 0; if [[ -z "${RIPEN_RUN_FILTER:-}" ]]; then printf "%s\n" "$@"; else printf "%s\n" "$@" | grep -E -- "$RIPEN_RUN_FILTER" || true; fi; }
 
 # seed_jobs TAG ROOT run-args... : one job per run looping over RIPEN_SEEDS, then a summary job (afterany)
 seed_jobs() {

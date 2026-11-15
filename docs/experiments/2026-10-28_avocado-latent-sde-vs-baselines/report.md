@@ -13,7 +13,7 @@ and [New baselines](#new-baselines-classical-degradation-models-neural-cde-trans
 > initialisation and the batch order. The train/test split stayed fixed, so the spread is training variance only.
 > Three seed-0 claims hold up: the Arrhenius clock beats both ablated clocks (every seed, every held-out
 > temperature), the latent ODE's intervals are too narrow, and the latent SDE is the most robust model under
-> sparse photos. Two claims are weaker than seed 0 suggested. ODE-RNN's in-distribution win (CRPS 0.69) was a
+> sparse photos (provisional: see the 2026-11-14 correction in E4). Two claims are weaker than seed 0 suggested. ODE-RNN's in-distribution win (CRPS 0.69) was a
 > good draw; over 5 seeds it ties GRU + gap. And the latent SDE does **not** beat GRU-D on every held-out
 > temperature: seed 0 drew a bad GRU-D, and on T20 and ambient GRU-D is as good or better when it doesn't fail.
 
@@ -247,8 +247,6 @@ and `summary_recal.md`; Round 1 recalibrated: [`outputs/avocado/round1/summary_r
 
 ### Round 2b · Every experiment with the guided posterior
 
-> **Correction (2026-11-14).** These every-2nd/3rd-day numbers were computed with a bug in `subsample_visits`: when a fruit first looked spoiled on a day the sparser schedule skipped, it was treated as never spoiling, which affected about 55 % of the test fruit that do spoil. The bug is fixed (`tests/test_subsample.py`) and the affected runs need to be rerun (`bash run_umiacs.sh sparse`). Treat these numbers as provisional until this table is updated.
-
 Same model as Round 2 (guided posterior, predictive event term, ResNet-18 features), 5 seeds each, in
 [`outputs/avocado/round2/`](tables/round2_summary.md). Unrecalibrated unless marked.
 
@@ -264,6 +262,8 @@ Same model as Round 2 (guided posterior, predictive event term, ResNet-18 featur
 error 1.5–2.4× against the better ablation, and 1.5–3.1× against the per-group clock.
 
 **E4 again: sparse photos are where the latent SDE clearly wins.**
+
+> **Correction (2026-11-14).** These every-2nd/3rd-day numbers (and the sparse rows of the new-baselines runs and of the paired tests below) were computed with a bug in `subsample_visits`: when a fruit first looked spoiled on a day the sparser schedule skipped, it was treated as never spoiling, which affected about 55 % of the test fruit that do spoil. The bug is fixed (`tests/test_subsample.py`) and the affected runs need to be rerun (`bash run_umiacs.sh sparse`). Treat these numbers as provisional until this table is updated.
 
 | Schedule | latent SDE (guided) | transformer | Wiener | GRU-D | gamma | neural CDE | landmark Cox |
 |---|---|---|---|---|---|---|---|
@@ -339,7 +339,7 @@ neural CDE hidden 64; transformer d_model 32, one layer; Cox and gamma lr 3e-2 f
 **Takeaways.**
 * **The transformer is the best in-distribution model**, and the gap to the latent SDE is significant (below). It also
   wins on T20 and ambient. Its weakness is the same as every neural model's: cold storage (7.9 days off) and sparse
-  photos (CRPS 1.89 every 3rd day).
+  photos (CRPS 1.89 every 3rd day; provisional, see the E4 correction).
 * **The Wiener process is the only model that handles cold storage**: 3.0 days off with 74 % coverage, against 5.5 and
   7 % for the latent SDE. It extrapolates the fruit's own trend through an Arrhenius clock with no learned network,
   so it has nothing to over-fit to the warm groups. In-distribution it is far behind (CRPS 1.24).
@@ -355,7 +355,7 @@ neural CDE hidden 64; transformer d_model 32, one layer; Cox and gamma lr 3e-2 f
 [`scripts/analysis/paired_bootstrap.py`](../../../scripts/analysis/paired_bootstrap.py): per test prediction, CRPS and absolute error are
 averaged over the 5 seeds; the difference (latent SDE minus competitor) is matched on (fruit, prefix length); fruit
 are resampled with replacement 5,000 times, because the prefixes of one fruit are correlated. ✱ = 95 % interval
-excludes 0. Negative favours the latent SDE. Full tables: [`outputs/avocado/significance/summary_recal.md`](tables/significance_summary_recal.md)
+excludes 0. Negative favours the latent SDE. The every-2nd/3rd-day rows are provisional (see the E4 correction). Full tables: [`outputs/avocado/significance/summary_recal.md`](tables/significance_summary_recal.md)
 (both recalibrated) and [`outputs/avocado/significance/summary.md`](tables/significance_summary.md).
 
 | Comparison (recalibrated) | Δ CRPS [95 % CI] | Δ MAE (d) [95 % CI] |
@@ -376,7 +376,8 @@ excludes 0. Negative favours the latent SDE. Full tables: [`outputs/avocado/sign
 
 **Where the latent SDE stands.** It ties the GRU/ODE-RNN family in-distribution and loses to the transformer by
 ~0.1 CRPS. It beats every learned model when extrapolating to cold storage, though the Wiener process beats it there.
-And it is the best model when photos are sparse, by a clear and significant margin. The Arrhenius clock is worth
+And it is the best model when photos are sparse, by a clear and significant margin (provisional until the sparse runs are
+redone after the 2026-11-14 fix). The Arrhenius clock is worth
 1.5–3× under transfer within the SDE family.
 
 ## 4. Bugs found and fixed this week
@@ -423,7 +424,7 @@ model. Fix 5 changes nothing wherever the old computation was finite.
 5. **A2SL** has only 4 tracked fruit, which is too few for model comparisons, and its day-assigned stage labels leak
    the schedule to any model that reads the stage history (the classical baselines score near-perfectly there).
 6. **The transformer** beats the latent SDE in-distribution and on interpolation (T20, ambient). The latent SDE's
-   case rests on sparse sampling, cold-storage extrapolation among learned models, and the physical clock.
+   case rests on sparse sampling (provisional, see the E4 correction), cold-storage extrapolation among learned models, and the physical clock.
 
 ## 6. Reproduce
 

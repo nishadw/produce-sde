@@ -81,6 +81,15 @@ def test_no_event_lost_on_synthetic():
                 assert s.spoil_hi - s.spoil_lo <= 2 * every - 1 + 1e-9
 
 
+@pytest.mark.parametrize("every", [2, 3])
+def test_first_visit_spoiled_and_single_visit(every):
+    sub = subsample_visits(daily_item([SPOILED_STAGE]), every)  # spoiled at the first (always kept) visit
+    assert [v.t for v in sub.visits] == [0.0] and (sub.spoil_lo, sub.spoil_hi) == (0.0, 0.0)
+    assert not sub.meta["subsample"]["hi_extrapolated"]
+    single = subsample_visits(daily_item([2]), every)  # one unspoiled visit: right-censored at it
+    assert single.right_censored and single.spoil_lo == 0.0 and len(single.visits) == 1
+
+
 def test_rejects_bad_every():
     with pytest.raises(ValueError):
         subsample_visits(daily_item([1, 5]), 0)

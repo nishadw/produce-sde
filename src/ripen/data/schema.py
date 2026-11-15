@@ -5,6 +5,8 @@ is never observed exactly: it lies in ``(spoil_lo, spoil_hi]`` where
 ``spoil_lo`` is the last visit at which the item was seen unspoiled and
 ``spoil_hi`` the first visit at which it was seen spoiled. If it was still
 unspoiled at the last visit, ``spoil_hi`` is ``inf`` (right-censored).
+After :func:`subsample_visits`, ``spoil_hi`` can be the time of a scheduled visit
+past the last kept one (``meta["subsample"]["hi_extrapolated"]``).
 """
 
 from __future__ import annotations

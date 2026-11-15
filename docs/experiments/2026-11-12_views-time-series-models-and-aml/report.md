@@ -73,7 +73,7 @@ with a photo-only teacher (`reset_only_photoT`, the fair baseline) 0.45 / 0.69; 
 (only reset_only, −0.01, has an interval excluding 0). Latent SDE: photo 0.95, fair baseline 0.90, ours_rkd 0.86,
 samd 0.87, none significant against the fair baseline; the first-round SDE gains (reset_only 0.55, ours_rkd 0.62) did
 not reproduce. The extra predictor training in the teacher phase (fresh optimiser, shared predictor copied back) makes
-forecasts wider: better log score, worse MAE, CRPS flat.
+forecasts sharper (latent ODE 80 % interval on the tracked fruit 3.7 → 2.4 d): better log score, worse MAE, CRPS flat.
 
 **Follow-up: mango correction on the population-Brier target (`outputs/mango_views_poprecal/maps.md`).** Map fitted on
 the other folds' (F_i(d_j − d_i), s_j) pairs: isotonic, Platt, Platt + horizon, and a guarded choice by inner

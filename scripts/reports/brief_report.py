@@ -143,7 +143,7 @@ para("Avocados and mangoes · November 2026", color=GREY, size=9, after=4)
 para(
     "Goal: from a few photos and/or microwave scans of a fruit, forecast the probability it has spoiled by each future "
     "day. Lower is better for every score. Avocado score = log score (how little probability the forecast gave to "
-    "the day the fruit actually spoiled), on the 4 lab avocados tracked to spoilage, each held out in turn. Day error "
+    "the two-day window in which the fruit spoiled), on the 4 lab avocados tracked to spoilage, each held out in turn. Day error "
     "= days between the forecast's median and the first day the fruit was seen spoiled. Mango score = Brier score of the forecast "
     "fraction spoiled against what the 48-fruit batch actually showed. Scanner = the microwave scanner's 0°, 120° and "
     "240° rotation views (avocado) or all five antenna spacings, every scan up to the cut day (mango).",
@@ -195,7 +195,7 @@ para(
     "learned, during training, from a teacher that also saw the scans. The methods differ in three choices: is the "
     "teacher fixed or rebuilt each round, does the student take over the teacher's predictor (every layer after the "
     "encoder), and what the student "
-    "copies. SAMD follows Shen et al.; the others are ported from the lab's RepDistiller code (train_student.py, distiller_zoo/).",
+    "copies. SAMD follows Shen et al.; the KD and RKD losses and the lab method are ported from the lab's RepDistiller code (train_student.py, distiller_zoo/).",
     size=9.5,
 )
 DESC = [
@@ -206,7 +206,7 @@ DESC = [
      "CAML's distillation loss, fixed teacher"),
     ("samd", "SAMD", "Photo + scanner, rebuilt from student each round", "Yes", "Teacher's internal features",
      "Shen et al., ICML 2023"),
-    ("ours", "Lab method", "Same as SAMD", "Yes", "Teacher's forecast (KD)", "run_our_steering_distill.sh"),
+    ("ours", "Lab method", "Same as SAMD", "Yes", "Teacher's forecast (KD)", "run_our_steering_distill*.sh"),
     ("ours_rkd", "Lab method + RKD", "Same as SAMD", "Yes",
      "How the teacher arranges fruit: pairwise distances and triplet angles", "Park et al., CVPR 2019"),
     ("teacher", "Teacher", "—", "—", "— (it sees the scanner at test time)", "Reference; needs the scanner"),

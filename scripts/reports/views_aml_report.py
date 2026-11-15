@@ -144,14 +144,14 @@ para(
     "and combine their forecasts? Second, which kind of time-series model makes the best use of repeated scans? Third, "
     "can a model that sees both the photo and the scan teach a model that sees only the photo, which is what a shopper "
     "would have? For the third question we used the teaching methods in the lab's code (RepDistiller and TMC) and the "
-    "lab's own method, plus two methods from our earlier work."
+    "lab's own method, plus the two methods (CAML and SAMD) used in our earlier avocado study."
 )
 para(
     "15 avocados followed for two weeks. Four (avocados 1, 2, 3 and 11) were photographed and scanned every "
     "other day until they spoiled; avocados 4 to 10 were scanned once, on the day they were cut open, and 12 to 15 "
     "were never scanned. Each scan records six views, 60° apart. Each model "
     "was trained with one followed avocado held out and scored on it, four times over, and every run was repeated 3 "
-    "times. The score is how much probability the forecast gave to the day the avocado really spoiled (lower is better).",
+    "times. The score is how little probability the forecast gave to the day the avocado really spoiled (lower is better).",
     lead="Avocados: ",
 )
 para(
@@ -173,7 +173,7 @@ findings = [
     ("Best avocado model: ", "the latent ODE beat the latent SDE with every input except the 240° view alone "
      f"(photo + 0/120/240°: {a('latent_ode_photo_mw_0+120+240')} vs {a('latent_sde_photo_mw_0+120+240')}). [Table 1]"),
     ("Teaching a photo model, avocados: ", "the methods that rebuild the teacher from the student each round "
-     f"(SAMD, the lab's method and its variants) scored better than the photo-only model, by up to a third (latent SDE: "
+     f"(SAMD, the lab's method and its variants) scored better than the photo-only model, by up to about 37 % (latent SDE: "
      f"{a('latent_sde_photo', src=AML)} to {a('latent_sde_' + best_sde, src=AML)}). Methods with a fixed teacher did not "
      "help. [Chart 2, Table 2]"),
     ("That gain does not come from the scanner: ", "the same take-turns training with no teaching term at all does as "

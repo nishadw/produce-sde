@@ -15,7 +15,7 @@ Plain-language version: `../results/2026-11-13_results-brief-ode-sde-aml.docx`, 
 
 ## Findings
 - The reset-style gain is the take-turns copy step: latent ODE log score 0.71 → 0.45 with no scanner anywhere, while
-  MAE worsens 0.40 → 0.69 d (less over-confident, not more accurate). No teaching method beats that fair baseline.
+  MAE worsens 0.40 → 0.69 d (sharper forecasts, 80 % interval 3.7 → 2.4 d, with the median further from the day the fruit was first seen spoiled). No teaching method beats that fair baseline.
 - The scanner teacher itself is barely better than photo only (0.66 vs 0.71), so there is little to distil. CAML
   (no rounds) matches photo only.
 - The earlier latent SDE gain (`reset_only` 0.95 → 0.55, 3 seeds) did not reproduce with 5 seeds (0.95 → 0.89; fair
