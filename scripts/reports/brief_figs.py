@@ -74,38 +74,43 @@ for m in MODELS:
         r["mango"] = mango(f"latent_ode_{MANGO_AML[meth]}") if m == "latent_ode" and meth in MANGO_AML else None
         N["aml"][f"{m}|{meth}"] = r
 
-# ---------------------------------------------------------------- chart 1: latent ODE vs SDE by input
-fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.0))
-for ax, key, title in zip(axes, ("log", "mango"), ("Avocado score", "Mango score"), strict=True):
-    for j, (m, lab) in enumerate(MODELS.items()):
-        y = [N["models"][f"{m}|{i[0]}"][key] for i in INPUTS]
-        x = np.arange(len(INPUTS)) + (j - 0.5) * 0.38
-        ax.bar(x, y, 0.36, color=(BLUE, ORANGE)[j], label=lab)
-        for xi, yi in zip(x, y, strict=True):
-            ax.text(xi, yi, f"{yi:.2f}" if key == "log" else f"{yi:.3f}", ha="center", va="bottom", fontsize=6.5)
-    ax.set_xticks(range(len(INPUTS)), [i[0].replace(" ", "\n", 1) for i in INPUTS], fontsize=8)
-    ax.set_title(title + " (lower is better)", loc="left", fontsize=9.5, fontweight="bold")
-fig.legend(*axes[1].get_legend_handles_labels(), fontsize=8, loc="lower center", ncol=2)
-fig.tight_layout(rect=(0, 0.08, 1, 1))
-fig.savefig(HERE / "br_models.png", dpi=200)
+# ---------------------------------------------------------------- chart 1: one model per scanner view
+VIEWS = ["0", "60", "120", "180", "240", "300"]
+fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.7), sharey=True)
+for ax, (m, lab) in zip(axes, MODELS.items(), strict=True):
+    rows = [OLD["avo"][f"{m}_mw_{v}"]["log"] for v in VIEWS]
+    best = int(np.argmin([r[0] for r in rows]))
+    ax.bar(range(6), [r[0] for r in rows], 0.6, yerr=[r[1] for r in rows], capsize=2,
+           color=[BLUE if i == best else LIGHT for i in range(6)], error_kw={"lw": 0.7, "color": "#333"})
+    for i, r in enumerate(rows):
+        ax.text(i, 0.52, f"{r[0]:.2f}", ha="center", va="bottom", fontsize=7, color="white" if i == best else "#333")
+    for key, ls, txt in (("time", "--", "date only"), ("photo", ":", "photo only")):
+        y = OLD["avo"][f"{m}_{key}"]["log"][0]
+        ax.axhline(y, color=DARK, lw=1, ls=ls)
+        ax.text(5.5, y, txt, fontsize=7, color=DARK, va="center")
+    ax.set_xticks(range(6), [v + "°" for v in VIEWS], fontsize=8)
+    ax.set_xlim(-0.6, 6.6)
+    ax.set_ylim(0.5, 1.2)
+    ax.set_title(f"{lab}: scanner view alone", loc="left", fontsize=9.5, fontweight="bold")
+axes[0].set_ylabel("Avocado score (lower is better)", fontsize=8)
+fig.tight_layout()
+fig.savefig(HERE / "br_views.png", dpi=200)
 plt.close(fig)
 
-# ---------------------------------------------------------------- chart 2: teaching a photo-only model
-LAB = {"photo": "Photo only", "reset_only_photoT": "Take-turns\ncontrol", "kd": "CAML-style\nKD", "samd": "SAMD",
-       "ours": "Lab method", "ours_rkd": "Lab method\n+ RKD", "teacher": "Teacher\n(needs scanner)"}  # fmt: skip
-fig, ax = plt.subplots(figsize=(7.2, 2.8))
-meths = [k for k in AML if all(f"{m}|{k}" in N["aml"] for m in MODELS)]
-for j, (m, lab) in enumerate(MODELS.items()):
-    y = [N["aml"][f"{m}|{k}"]["log"][0] for k in meths]
-    e = [N["aml"][f"{m}|{k}"]["log"][1] for k in meths]
-    x = np.arange(len(meths)) + (j - 0.5) * 0.38
-    ax.bar(x, y, 0.36, color=(BLUE, ORANGE)[j], label=lab, yerr=e, capsize=2, error_kw={"lw": 0.7, "color": "#333"})
-    for xi, yi, ei in zip(x, y, e, strict=True):
-        ax.text(xi, yi + ei + 0.02, f"{yi:.2f}", ha="center", va="bottom", fontsize=7)
+# ---------------------------------------------------------------- chart 2: teaching a photo-only latent ODE
+LAB = {"photo": "Photo only", "kd": "CAML-style\nKD", "samd": "SAMD", "ours": "Lab method",
+       "reset_only_photoT": "Take-turns\n(no scanner)", "teacher": "Teacher\n(needs scanner)"}  # fmt: skip
+fig, ax = plt.subplots(figsize=(7.2, 2.5))
+meths = [k for k in LAB if f"latent_ode|{k}" in N["aml"]]
+y = [N["aml"][f"latent_ode|{k}"]["log"][0] for k in meths]
+e = [N["aml"][f"latent_ode|{k}"]["log"][1] for k in meths]
+cols = [DARK if k == "photo" else LIGHT if k in ("teacher", "reset_only_photoT") else BLUE for k in meths]
+ax.bar(range(len(meths)), y, 0.6, color=cols, yerr=e, capsize=2, error_kw={"lw": 0.7, "color": "#333"})
+for xi, (yi, ei) in enumerate(zip(y, e, strict=True)):
+    ax.text(xi, yi + ei + 0.02, f"{yi:.2f}", ha="center", va="bottom", fontsize=7.5)
 ax.set_xticks(range(len(meths)), [LAB[k] for k in meths], fontsize=8)
-ax.set_title("Avocado score, photo-only student (lower is better)", loc="left", fontsize=9.5, fontweight="bold")
-ax.legend(fontsize=8, loc="upper right", ncol=2)
-ax.set_ylim(0, max(N["aml"][f"{m}|{k}"]["log"][0] for m in MODELS for k in meths) * 1.35)
+ax.set_title("Latent ODE, photo-only student (lower is better)", loc="left", fontsize=9.5, fontweight="bold")
+ax.set_ylim(0, max(y) * 1.3)
 fig.tight_layout()
 fig.savefig(HERE / "br_aml.png", dpi=200)
 plt.close(fig)

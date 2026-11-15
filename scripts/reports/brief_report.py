@@ -1,4 +1,4 @@
-"""Short presentation brief: one section per model (what it is, then its scores) (report env).
+"""Professor brief: which scanner view predicts best, and AML for a photo-only model (report env).
 
 Run brief_figs.py first (ripen env; writes br_*.png and brief_numbers.json to outputs/report_figures). Writes
 2026-11-13_results-brief-ode-sde-aml.docx to ../results (``_paths.RESULTS``, outside the repository).
@@ -134,131 +134,116 @@ def a(m, k, f="log"):
     return r[f][0] if f == "log" else r[f]
 
 
-ode, sde = (lambda i, k="log": M[f"latent_ode|{i}"][k]), (lambda i, k="log": M[f"latent_sde|{i}"][k])
-INPUTS = ("Photo", "Scanner only", "Photo + scanner")
+V = json.loads((HERE / "views_aml_numbers.json").read_text())["avo"]  # views study: 3 seeds x 4 held-out fruit
+
+
+def view(m, key):
+    """Mean log score; '*' when the paired bootstrap against date only excludes 0."""
+    r, b = V[f"{m}_{key}"], V.get(f"{m}_{key}_boot") or ""
+    return f2(r["log"][0]) + (" *" if b.endswith("*") else "")
+
+
+def ode_aml(k, f="log"):
+    return a("latent_ode", k, f)
+
 
 # =====================================================================================================================
-doc.add_paragraph("Spoilage Forecasts: Models, Methods and Results", style="Title")
-para("Avocados and mangoes · November 2026", color=GREY, size=9, after=4)
+doc.add_paragraph("Avocado Spoilage: Scanner Views and a Photo-Only Model", style="Title")
+para("Lab avocados (A2SL) · November 2026", color=GREY, size=9, after=4)
 para(
-    "Goal: from a few photos and/or microwave scans of a fruit, forecast the probability it has spoiled by each future "
-    "day. Lower is better for every score. Avocado score = log score (how little probability the forecast gave to "
-    "the two-day window in which the fruit spoiled), on the 4 lab avocados tracked to spoilage, each held out in turn. Day error "
-    "= days between the forecast's median and the first day the fruit was seen spoiled. Mango score = Brier score of the forecast "
-    "fraction spoiled against what the 48-fruit batch actually showed. Scanner = the microwave scanner's 0°, 120° and "
-    "240° rotation views (avocado) or all five antenna spacings, every scan up to the cut day (mango).",
+    "Questions asked: (1) with one time-series model per microwave view, which of the 6 views predicts spoilage best; "
+    "(2) can AML / CAML teach a photo-only model from a teacher that also sees the scanner. Data: 4 avocados "
+    "photographed and scanned every other day until they spoiled, each held out in turn. Score = log score (lower is "
+    "better): how little probability the forecast gave to the two-day window in which the fruit spoiled. "
+    "* = significantly better than the comparison (95 % paired bootstrap).",
     size=8.5,
     color=GREY,
 )
+doc.add_heading("In short", level=1)
+bullet(" 240° for the latent SDE (the only single view that beats a date-only model significantly). For the latent ODE "
+       "every view helps and all six are within 0.05 of each other, so no view stands out.", lead="Best view:")
+bullet(" photo + the 0°/120°/240° views is the best input for the latent ODE, but photo alone is close behind. "
+       "The latent ODE beats the latent SDE on almost every input.", lead="Best input:")
+bullet(" SAMD and the lab method improve the photo-only model, but a control that never sees the scanner improves it "
+       "just as much. The gain comes from the take-turns training, not from the scanner.", lead="AML:")
 
-# ----------------------------------------------------------------------------------------------------- models
-doc.add_heading("1. The forecasting models", level=1)
-table(
-    ["Model", "How it works", "What it outputs"],
-    [
-        ["Latent ODE (ordinary differential equation)",
-         "An encoder reads the photos/scans so far and estimates the fruit's hidden ripeness, which then rises along "
-         "a smooth learned curve (no randomness). Spoilage = the curve crossing a learned line.",
-         "One path; the spread comes only from uncertainty about where the fruit started"],
-        ["Latent SDE (stochastic differential equation)",
-         "The same hidden ripeness curve plus random day-to-day drift (a learned noise term). Spoilage is the first "
-         "time the drifting path crosses the line; its probability is computed exactly by solving a PDE.",
-         "A spread of paths; wider ranges"],
-    ],
-    [1.55, 4.0, 1.55],
-    left=(0, 1, 2),
-)  # fmt: skip
-rows = [[i, f2(ode(i)), f2(ode(i, "mae")), f3(ode(i, "mango")), f2(sde(i)), f2(sde(i, "mae")), f3(sde(i, "mango"))]
-        for i in INPUTS]  # fmt: skip
-table(["Input", "ODE avocado score", "ODE day error", "ODE mango score", "SDE avocado score", "SDE day error",
-       "SDE mango score"], rows, [1.25, 1.0, 0.9, 1.0, 1.0, 0.9, 1.0])  # fmt: skip
-picture("br_models.png", 5.6)
+# ----------------------------------------------------------------------------------------------------- views
+doc.add_heading("1. One model per scanner view", level=1)
+para(
+    "Each view is fed to its own model as a time series (every scan up to the forecast day). Two models: the latent "
+    "ODE (a hidden ripeness score that rises smoothly; spoiled when it crosses a line) and the latent SDE (the same "
+    "plus random day-to-day drift).",
+    size=9.5,
+)
+ROWS = [("Date only (no images)", "time"), ("Photo only", "photo")] + [(f"Scanner {v}°", f"mw_{v}") for v in
+        ("0", "60", "120", "180", "240", "300")] + [("Scanner 0° + 120° + 240°", "mw_0+120+240"),
+        ("Scanner, all 6 views", "mw_all"), ("Photo + scanner 0°/120°/240°", "photo_mw_0+120+240")]  # fmt: skip
+table(["Input (* = beats date only)", "Latent ODE score", "Latent SDE score"],
+      [[lab, view("latent_ode", k), view("latent_sde", k)] for lab, k in ROWS], [2.6, 1.4, 1.4],
+      highlight=(10,))  # fmt: skip
+picture("br_views.png", 6.4)
 bullet(
-    f" photo + scanner is best on avocado ({f2(ode('Photo + scanner'))}), but photo alone ({f2(ode('Photo'))}) is close.",
-    lead="Latent ODE is the better model on both fruits:",
+    f" every view beats date only ({view('latent_ode', 'time')}), but they span only "
+    f"{min(V[f'latent_ode_mw_{v}']['log'][0] for v in ('0', '60', '120', '180', '240', '300')):.2f}–"
+    f"{max(V[f'latent_ode_mw_{v}']['log'][0] for v in ('0', '60', '120', '180', '240', '300')):.2f}, "
+    "less than the run-to-run spread.",
+    lead="Latent ODE:",
 )
 bullet(
-    f" scanner only beats photo for both models (ODE {f3(ode('Scanner only', 'mango'))} vs "
-    f"{f3(ode('Photo', 'mango'))}; SDE {f3(sde('Scanner only', 'mango'))} vs {f3(sde('Photo', 'mango'))}).",
-    lead="On mango the scanner matters:",
+    f" 240° ({f2(V['latent_sde_mw_240']['log'][0])}) and 0° ({f2(V['latent_sde_mw_0']['log'][0])}) are best; "
+    "60°, 180° and 300° are no better than date only. The 0°/120°/240° views beat the 60°/180°/300° views in 14 of 16 "
+    "significance checks; we do not know why, so it is worth asking the lab how the views are produced.",
+    lead="Latent SDE:",
 )
 bullet(
-    " every mango was cut open once and only 9 of 48 spoiled, so no fruit has an observed spoilage day.",
-    lead="No mango day error:",
+    f" combining all six views is no better than the best single view, and photo + scanner "
+    f"({f2(V['latent_ode_photo_mw_0+120+240']['log'][0])} ODE) is only a little better than photo alone "
+    f"({f2(V['latent_ode_photo']['log'][0])}). All 4 fruit spoiled on day 7–9 of a fixed schedule, so the date "
+    "already pins spoilage to about a day; images can only refine that.",
+    lead="Why the differences are small:",
 )
 
 # ----------------------------------------------------------------------------------------------------- AML
-doc.add_page_break()
-doc.add_heading("2. Teaching a photo-only model with the scanner (auxiliary modality learning, AML)", level=1)
+doc.add_heading("2. Teaching a photo-only model (AML)", level=1)
 para(
-    "The scanner is not available everywhere, so the aim is a student model that needs only photos at test time but "
-    "learned, during training, from a teacher that also saw the scans. The methods differ in three choices: is the "
-    "teacher fixed or rebuilt each round, does the student take over the teacher's predictor (every layer after the "
-    "encoder), and what the student "
-    "copies. SAMD follows Shen et al.; the KD and RKD losses and the lab method are ported from the lab's RepDistiller code (train_student.py, distiller_zoo/).",
+    "The student sees only photos at test time; during training a teacher also sees the 0°/120°/240° scans. Latent "
+    "ODE, 5 repeats × 4 held-out fruit (a separate run from section 1, so compare rows within this table).",
     size=9.5,
 )
-DESC = [
-    ("photo", "Photo only", "None", "No", "Nothing (trained alone)", "Baseline"),
-    ("reset_only_photoT", "Take-turns control", "Photos only, rebuilt each round", "Yes", "Nothing",
-     "Isolates the schedule: no scanner anywhere"),
-    ("kd", "CAML-style KD", "Photo + scanner, trained once, then fixed", "No", "Teacher's forecast (KD)",
-     "CAML's distillation loss, fixed teacher"),
-    ("samd", "SAMD", "Photo + scanner, rebuilt from student each round", "Yes", "Teacher's internal features",
-     "Shen et al., ICML 2023"),
-    ("ours", "Lab method", "Same as SAMD", "Yes", "Teacher's forecast (KD)", "run_our_steering_distill*.sh"),
-    ("ours_rkd", "Lab method + RKD", "Same as SAMD", "Yes",
-     "How the teacher arranges fruit: pairwise distances and triplet angles", "Park et al., CVPR 2019"),
-    ("teacher", "Teacher", "—", "—", "— (it sees the scanner at test time)", "Reference; needs the scanner"),
+AMLROWS = [
+    ("photo", "Photo only", "Student trained alone (baseline)"),
+    ("kd", "CAML-style KD", "Fixed teacher; student matches its forecast (0.1 own loss + 0.9 teacher, temperature 4)"),
+    ("samd", "SAMD (Shen et al. 2023)", "Teacher rebuilt from the student each round and shares its predictor; "
+     "student matches the teacher's features"),
+    ("ours", "Lab method", "SAMD's rounds, with CAML-style KD as the matching loss"),
+    ("reset_only_photoT", "Take-turns control", "SAMD's rounds, but the teacher never sees the scanner"),
+    ("teacher", "Teacher", "Photo + scanner; needs the scanner at test time"),
 ]  # fmt: skip
-table(["Method", "Teacher", "Shared predictor","What the student copies", "Source / note"],
-      [[lab, t, sh, c, n] for _, lab, t, sh, c, n in DESC], [1.25, 1.85, 0.7, 1.85, 1.45], highlight=(1,),
-      left=(0, 1, 3, 4), size=8)  # fmt: skip
-para(
-    "Rebuilt each round (SAMD, lab methods, take-turns control): copy the student's weights into the teacher (scanner "
-    "inputs start at zero), train the teacher a few epochs with the scans, hand its predictor (the dynamics and "
-    "output layers after the encoder) back to the student, then train the student a few epochs. Knowledge "
-    "distillation (KD) = 0.1 × the student's own loss + 0.9 × match to the teacher's softened forecast (temperature 4), as in the lab scripts. Relational knowledge distillation "
-    "(RKD) matches distances and angles between fruit rather than the fruit themselves.",
-    size=8.5,
-    color=GREY,
-)
-rows = [[lab, f2(a("latent_ode", k)), f2(a("latent_ode", k, "mae")), f2(a("latent_sde", k)),
-         f3(A.get(f"latent_ode|{k}", {}).get("mango"))] for k, lab, *_ in DESC]  # fmt: skip
-table(["Method", "ODE avocado score", "ODE day error", "SDE avocado score", "Mango score (ODE)"], rows,
-      [1.6, 1.25, 1.1, 1.25, 1.25], highlight=(1,))  # fmt: skip
-para(
-    "Avocado: 5 repeats × 4 held-out fruit, separate run from section 1 (compare rows within this table). Mango: 3 "
-    "repeats; the take-turns control was not run on mango.",
-    size=8,
-    color=GREY,
-    italic=True,
-)
-picture("br_aml.png", 5.6)
-taught = ("kd", "samd", "ours", "ours_rkd")
-best = min(taught, key=lambda k: a("latent_ode", k))
-lab = {k: x for k, x, *_ in DESC}
+table(["Method", "What it does", "Score", "vs photo only", "Day error"],
+      [[lab, d, f2(ode_aml(k)), A[f"latent_ode|{k}"]["vs_photo"] or "—", f"{ode_aml(k, 'mae'):.2f} d"]
+       for k, lab, d in AMLROWS], [1.35, 2.85, 0.6, 1.3, 0.75], highlight=(4,), left=(0, 1), size=8)  # fmt: skip
+picture("br_aml.png", 5.8)
 bullet(
-    f" the teacher, with the scanner, is barely better than photo only ({f2(a('latent_ode', 'teacher'))} vs "
-    f"{f2(a('latent_ode', 'photo'))}), so there is little to transfer. CAML-style KD, with a fixed teacher, matches "
-    f"photo only ({f2(a('latent_ode', 'kd'))}).",
-    lead="Little for the student to learn:",
+    f" with the scanner the teacher scores {f2(ode_aml('teacher'))} against {f2(ode_aml('photo'))} for photo only, "
+    f"not a significant gain, so there is little to pass on. CAML-style KD matches photo only ({f2(ode_aml('kd'))}).",
+    lead="The scanner adds little, even to the teacher:",
 )
 bullet(
-    f" {lab[best]} ({f2(a('latent_ode', best))}) ties the take-turns control ({f2(a('latent_ode', 'reset_only_photoT'))}), "
-    "which never sees the scanner. The gain is the rebuild-and-share-predictor schedule, not the scans.",
-    lead="Gains come from the training rounds:",
+    f" SAMD ({f2(ode_aml('samd'))}) and the lab method ({f2(ode_aml('ours'))}) beat photo only, but the take-turns "
+    f"control ({f2(ode_aml('reset_only_photoT'))}) does as well without any scanner.",
+    lead="The gain comes from the training rounds:",
 )
 bullet(
-    f" the lower score comes with a larger day error ({f2(a('latent_ode', 'photo', 'mae'))} → "
-    f"{f2(a('latent_ode', best, 'mae'))} d): forecasts put more probability inside the two-day window in which the fruit spoiled, but their median "
-    "moves further from the day it was first seen spoiled.",
+    f" the better score comes with a larger day error ({ode_aml('photo', 'mae'):.2f} → "
+    f"{ode_aml('samd', 'mae'):.2f} d for SAMD): forecasts concentrate on the spoilage window, but their middle guess "
+    "moves further from the observed day.",
     lead="Trade-off:",
 )
-bullet(
-    f" no student beats photo only ({f3(A['latent_ode|photo']['mango'])}); the teacher does "
-    f"({f3(A['latent_ode|teacher']['mango'])}).",
-    lead="Mango:",
+para(
+    "To tell views and methods apart reliably we need more avocados tracked to spoilage, with varied spoilage days; "
+    "four fruit that all spoil on day 7–9 cannot separate differences under about 0.1.",
+    lead="Next: ",
+    size=9.5,
 )
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
