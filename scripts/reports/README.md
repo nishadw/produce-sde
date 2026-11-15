@@ -14,6 +14,7 @@ summaries exist in `outputs/`.
 | `2026-11-10_avocado-microwave-scanner-views.docx` | `a2sl_views_figs.py`, then `a2sl_views_report.py` |
 | `2026-11-12_views-time-series-models-and-aml.docx` | `views_aml_figs.py`, then `views_aml_report.py` |
 | `2026-11-13_results-brief-ode-sde-aml.docx` | `views_aml_figs.py`, `brief_figs.py`, then `brief_report.py` |
+| `2026-11-14_repo-audit.docx` | `audit_report.py` (hand-written; no charts) |
 
 Example:
 
