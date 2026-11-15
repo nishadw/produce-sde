@@ -6,6 +6,8 @@ Numbers in the text and table are typed here from outputs/mango/summary.md; upda
 
 from pathlib import Path
 
+from _paths import RESULTS
+
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -16,7 +18,7 @@ from docx.shared import Inches, Pt, RGBColor
 HERE = Path(__file__).resolve().parents[2] / "outputs" / "report_figures"  # charts + numbers live here
 HERE.mkdir(parents=True, exist_ok=True)
 REPO = HERE.parents[1]
-OUT = REPO / "results" / "2026-11-06_mango-photo-vs-microwave.docx"
+OUT = RESULTS / "2026-11-06_mango-photo-vs-microwave.docx"
 GREY = RGBColor(0x55, 0x5B, 0x65)
 
 doc = Document()

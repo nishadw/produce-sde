@@ -9,12 +9,14 @@ from docx.oxml import OxmlElement
 
 from pathlib import Path
 
+from _paths import RESULTS
+
 HERE = Path(__file__).resolve().parents[2] / "outputs" / "report_figures"  # charts + numbers live here
 HERE.mkdir(parents=True, exist_ok=True)
 REPO = HERE.parents[1]
 CMP = str(HERE / "compare.png")
 HELD = str(HERE / "heldout.png")
-FIG, OUT = str(HERE / "transfer.png"), str(REPO / "results" / "2026-10-28_avocado-latent-sde-vs-baselines.docx")
+FIG, OUT = str(HERE / "transfer.png"), str(RESULTS / "2026-10-28_avocado-latent-sde-vs-baselines.docx")
 GREY = RGBColor(0x55, 0x5B, 0x65)
 
 doc = Document()

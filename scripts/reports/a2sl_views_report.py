@@ -8,6 +8,8 @@ outputs/a2sl_views/labels_hidden*/summary*.md and scratch/evenodd.py (view-group
 import json
 from pathlib import Path
 
+from _paths import RESULTS
+
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -18,7 +20,7 @@ from docx.shared import Inches, Pt, RGBColor
 HERE = Path(__file__).resolve().parents[2] / "outputs" / "report_figures"  # charts + numbers live here
 HERE.mkdir(parents=True, exist_ok=True)
 REPO = HERE.parents[1]
-OUT = REPO / "results" / "2026-11-10_avocado-microwave-scanner-views.docx"
+OUT = RESULTS / "2026-11-10_avocado-microwave-scanner-views.docx"
 N = json.loads((HERE / "a2sl_numbers.json").read_text())
 GREY = RGBColor(0x55, 0x5B, 0x65)
 

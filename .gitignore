@@ -30,3 +30,6 @@ multirun/
 # Lecture build artifacts
 foundations/lecture/build/*.pdf
 foundations/experiments/demo_video/_cache/
+
+# Word reports are written outside the repo (../results); see scripts/reports/_paths.py
+/results/

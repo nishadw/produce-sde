@@ -8,6 +8,8 @@ the recalibration test on mangoes (scratch/mango_recal_diag.py), typed below.
 import json
 from pathlib import Path
 
+from _paths import RESULTS
+
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -18,7 +20,7 @@ from docx.shared import Inches, Pt, RGBColor
 HERE = Path(__file__).resolve().parents[2] / "outputs" / "report_figures"  # charts + numbers live here
 HERE.mkdir(parents=True, exist_ok=True)
 REPO = HERE.parents[1]
-OUT = REPO / "results" / "2026-11-12_views-time-series-models-and-aml.docx"
+OUT = RESULTS / "2026-11-12_views-time-series-models-and-aml.docx"
 N = json.loads((HERE / "views_aml_numbers.json").read_text())
 A, AML, G, GRID = N["avo"], N["aml"], N["mango"], N["grid"]
 P = "sep1+sep2+sep3+sep4+sep5"
