@@ -71,7 +71,7 @@ def test_latent_sde_gradient_methods_agree(method, synthetic_info, batch):
     g2 = jnp.concatenate([g.ravel() for g in jax.tree.leaves(eqx.filter(grads_ref, eqx.is_inexact_array))])
     rel = float(jnp.max(jnp.abs(g1 - g2)) / (jnp.max(jnp.abs(g2)) + 1e-12))
     # The continuous adjoint is an approximation, error ~1/steps (foundations/experiments/adjoint_tradeoffs.py);
-    # with one step per day and a running-max spoilage term it lands near 1e-1 here. Checkpointing is exact.
+    # with one step per day it lands near 1e-1 here. Checkpointing is exact.
     assert rel < (0.2 if method == "adjoint" else 1e-5)
 
 

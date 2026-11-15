@@ -7,7 +7,7 @@ ripeness class (stage 1 Unripe ... 5 Senescent, <= 1 N). ``scripts/data/ingest_m
 **Spoilage** is stage 5 (senescent). It is only seen on the cut day, so each fruit is *current-status* data:
 
 * senescent when cut on day ``d``: spoiled in ``(d0, d]``, where ``d0`` is the last study day by which **no** cut
-  fruit was senescent (day 10 here: all 30 fruit cut on days 0-10 were stage <= 4). This assumes the batch did not
+  fruit was senescent (day 10 here: all 36 fruit cut on days 0-10 were stage <= 4). This assumes the batch did not
   start spoiling before the first day any cut fruit was senescent; it is what makes early scans informative.
 * not senescent when cut on day ``d``: right-censored at ``d``.
 

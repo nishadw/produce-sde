@@ -18,6 +18,7 @@ Plain-language version: `../results/2026-11-13_results-brief-ode-sde-aml.docx`, 
   MAE worsens 0.40 → 0.69 d (less over-confident, not more accurate). No teaching method beats that fair baseline.
 - The scanner teacher itself is barely better than photo only (0.66 vs 0.71), so there is little to distil. CAML
   (no rounds) matches photo only.
-- The earlier latent SDE gain (0.95 → 0.55) did not reproduce with 5 seeds (0.95 → 0.89).
+- The earlier latent SDE gain (`reset_only` 0.95 → 0.55, 3 seeds) did not reproduce with 5 seeds (0.95 → 0.89; fair
+  baseline 0.90, SAMD 0.87, `ours_rkd` 0.86, none significant against the fair baseline).
 - Mango: the score-fitted correction helps only weak models (one-scan photo 0.246 → 0.206) and hurts the good ones,
   so mango forecasts are reported uncorrected.

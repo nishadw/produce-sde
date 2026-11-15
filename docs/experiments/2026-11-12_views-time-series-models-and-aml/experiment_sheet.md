@@ -1,7 +1,7 @@
 # Experiment sheet: views, time-series models and AML (avocado A2SL + mango)
 
 2026-11-12. Follows `docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md` (rounds 1-4) and `docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md`. Lab AML code read:
-`../code/TMC(handwritten)` (TMC, ICLR 2021, with a distillation driver) and `../code/RepDistiller(main_steering)`
+`../code/TMC(handwritten)` (TMC = Trusted Multi-View Classification, ICLR 2021, with a distillation driver) and `../code/RepDistiller(main_steering)`
 (RepDistiller with the lab's "ours" mode for steering regression).
 
 Protocol for every row unless noted: labels are targets only (never inputs), microwave numbers z-scored, 3 seeds,
@@ -62,7 +62,7 @@ per-pair sweeps (today's cache averages all 45 pairs).
 | A0 / A1 | photo-only baseline / teacher (ceiling) | | done (avocado) |
 | A2 | CAML KD on the forecast, alpha 0.9 T 4 and alpha 0.5 T 1 | RepDistiller `kd` | done (avocado) |
 | A3 | feature matching (FitNet) | RepDistiller `hint` | done (avocado) |
-| A4 | SAMD: reset + shared head + feature MSE | lab "ours" | done (avocado) |
+| A4 | SAMD: reset + shared head + feature MSE | Shen et al., ICML 2023 (≈ lab "ours" without the KD term) | done (avocado) |
 | A5 | **lab "ours" exactly**: reset + shared head + KD term, gamma 0.1 alpha 0.9 T 4 | `run_our_steering_distill*.sh` | new |
 | A6-A8 | relational losses on the representation: RKD, PKT, SP (frozen teacher and with reset) | RepDistiller zoo | new |
 | A9 | partial modality: separate unpaired photo-only loss, weight mu, teacher trained on scanned visits only | RepDistiller `partial` | new |

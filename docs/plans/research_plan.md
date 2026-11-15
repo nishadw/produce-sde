@@ -91,7 +91,7 @@ one, and the Monte Carlo running-max the ablation.
 |---|---|---|
 | P1 | *Exactness.* Under the progression-structured model the product of bridge no-crossing factors times the last-interval survival difference equals the likelihood of the censoring observations. | Markov property of the prior diffusion; proof in `docs/background/theory.md`; verified numerically (`docs/archive/verifier_report.md`) |
 | P2 | *Properness.* Under independent monitoring (visit times ⊥ event given covariates) the interval-censored log-likelihood is a strictly proper scoring rule for the event distribution; Survival-CRPS is not (Rindt et al. 2022). | Follows Yanagisawa & Akiyama (ICML 2026); we state it for our likelihood and use it as both loss and metric |
-| P3 | *Identifiability of the clock.* The rate *ratios* `κ(x)/κ(x')` — hence the Arrhenius `E_a` — and the forecast CDF are identified from the stage trajectories; the common factor is confounded with the latent origin and is pinned by the `z₀` prior (superseded 2026-11-03: the common factor is identified too, see `docs/background/theory.md` P3). | Scale argument on `(μ_R, σ_R, κ, θ, z₀)`; `tests/test_recovery.py` (ratios within 15 %, `E_a` within 15 %, CDF within 0.15) |
+| P3 | *Identifiability of the clock.* The rate *ratios* `κ(x)/κ(x')` — hence the Arrhenius `E_a` — and the forecast CDF are identified from the stage trajectories; the common factor is confounded with the latent origin and is pinned by the `z₀` prior (superseded 2026-11-03: the common factor is identified too, see `docs/background/theory.md` P3). | Scale argument on `(μ_R, σ_R, κ, θ, z₀)`; `tests/test_recovery.py` (ratios within 15 %, `E_a` within 15 %, CDF within 0.25) |
 | P4 | *Numerics.* The finite-difference scheme converges to `S̃` as the grid is refined, and for constant drift it matches the inverse-Gaussian law. | `tests/test_fpt_pde.py` |
 | P5 | *Exact inference.* The grid filter computes the marginal likelihood of stages, photo emissions and the censoring observation without a variational posterior; absolute rates, `σ` and the forecast CDF are recovered. | `tests/test_recovery.py::test_exact_filter_*`, brute-force comparison in `docs/background/theory.md` P5 |
 | E1 | Beats the two published point-estimate models on the avocado data on MAE-PO and gives calibrated intervals; keeps the censored fruit they dropped. | Mendeley avocado, all 8 model families, one protocol |
@@ -121,7 +121,7 @@ one, and the Monte Carlo running-max the ablation.
   to the MC estimator.
 - **Tamb faster than T20 in the avocado data.** A mean-temperature Arrhenius law cannot fit all three groups;
   the per-group clock is the comparator and the paper says so.
-- **Compute.** PDE solve: a 160-point grid × ~3,000 implicit (Crank–Nicolson) steps per batch, vectorised; cheaper than 64
+- **Compute.** PDE solve: a 160-point grid × 2,500 implicit (Crank–Nicolson) steps per batch, vectorised; cheaper than 64
   simulated paths per item.
 
 ## 7. Order of work from here
@@ -130,7 +130,7 @@ one, and the Monte Carlo running-max the ablation.
 2. ✔ Markov-interval likelihood in `LatentDynamics` (`event_likelihood: pde | mc`), progression-structured prior,
    clock on the generator (`√κ σ` calendar diffusion), learnable ordinal link scale.
 3. ✔ Proper metric `nll` (censored log score); MAE-PO still to add; CRPS/MAE kept for comparability.
-4. ✔ PBC2 and C-MAPSS loaders, configs, tests (`docs/data_second_domain.md`).
+4. ✔ PBC2 and C-MAPSS loaders, configs, tests (removed 2026-11-05, see the scope note above).
 5. ✔ `run_umiacs.sh`.
 6. ✔ `docs/background/theory.md` (P1–P4), `docs/background/background.md`.
 7. ⟳ Verifier passes (first pass running 2026-10-20); fix list to follow.

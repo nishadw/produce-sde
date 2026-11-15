@@ -144,9 +144,9 @@ para(
     "Goal: from a few photos and/or microwave scans of a fruit, forecast the probability it has spoiled by each future "
     "day. Lower is better for every score. Avocado score = log score (how little probability the forecast gave to "
     "the day the fruit actually spoiled), on the 4 lab avocados tracked to spoilage, each held out in turn. Day error "
-    "= days between the forecast's median and the true spoilage day. Mango score = Brier score of the forecast "
+    "= days between the forecast's median and the first day the fruit was seen spoiled. Mango score = Brier score of the forecast "
     "fraction spoiled against what the 48-fruit batch actually showed. Scanner = the microwave scanner's 0°, 120° and "
-    "240° rotation views.",
+    "240° rotation views (avocado) or all five antenna spacings, every scan up to the cut day (mango).",
     size=8.5,
     color=GREY,
 )
@@ -163,7 +163,7 @@ table(
         ["Latent SDE (stochastic differential equation)",
          "The same hidden ripeness curve plus random day-to-day drift (a learned noise term). Spoilage is the first "
          "time the drifting path crosses the line; its probability is computed exactly by solving a PDE.",
-         "A spread of paths; wider, more honest ranges"],
+         "A spread of paths; wider ranges"],
     ],
     [1.55, 4.0, 1.55],
     left=(0, 1, 2),
@@ -251,7 +251,8 @@ bullet(
 )
 bullet(
     f" the lower score comes with a larger day error ({f2(a('latent_ode', 'photo', 'mae'))} → "
-    f"{f2(a('latent_ode', best, 'mae'))} d): forecasts become less over-confident, not more accurate.",
+    f"{f2(a('latent_ode', best, 'mae'))} d): forecasts put more probability inside the two-day window in which the fruit spoiled, but their median "
+    "moves further from the day it was first seen spoiled.",
     lead="Trade-off:",
 )
 bullet(

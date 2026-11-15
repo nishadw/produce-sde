@@ -82,7 +82,8 @@ photo features only.
 
 Across the three AML rounds (teacher six pooled raw, six pooled z-scored, 0+120+240 z-scored) SAMD is the only
 method on the better side every time (-0.08, -0.17, -0.10) but never significant; every other student is within
-noise or worse. The teacher itself never beats photo-only, so there is no extra signal to distil.
+noise or worse. The teacher itself never beats photo-only, so there is no extra signal to distil. (The reset-style
+lab methods and controls added to the same tables later are discussed in the 2026-11-12 study.)
 
 ## Why the gains are small
 

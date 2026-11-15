@@ -266,7 +266,7 @@ stage_mango() {
 # A2SL: which microwave view predicts best (docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md). One job per model x input x view, each looping
 # 3 seeds x 4 folds; inputs mw / photo_mw at every view (0..300, six pooled, six side by side), plus photo only and the
 # no-sensor control. RIPEN_VIEW_LABELS=input reruns the presented setup (labels as inputs); default hidden. Jobs alternate
-# GPU / 2-CPU so more run at once under the per-user caps (4 GPUs, 16 CPUs). RIPEN_SCAN_STD=1: z-scored microwave
+# GPU / 2-CPU so more run at once under the per-user caps (4 GPUs, 32 CPUs). RIPEN_SCAN_STD=1: z-scored microwave
 # numbers (round 3), into labels_<mode>_std (and outputs/a2sl_aml_std for a2sl-aml).
 VIEW_MODELS=(${RIPEN_VIEW_MODELS:-latent_sde fpt_filter})
 stage_a2sl_views() {

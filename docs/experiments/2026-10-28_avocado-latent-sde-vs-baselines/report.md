@@ -234,7 +234,7 @@ and `summary_recal.md`; Round 1 recalibrated: [`outputs/avocado/round1/summary_r
   in-distribution and on ambient. On a temperature colder than anything in training, the sharper intervals are more
   over-confident.
 * **Recalibration.**
-  * In-distribution it lowers CRPS 2–5 % for every distributional model. It brings coverage from 0.93–0.96 down to
+  * In-distribution it lowers CRPS 0–7 % for every distributional model. It brings coverage from 0.93–0.96 down to
     0.86–0.93, near the 0.85–0.88 that a perfect forecaster scores on this metric (see
     [the plan's note](../../plans/round2_plan.md)).
   * It does not help under transfer: the validation PIT comes from the training temperatures.
@@ -315,10 +315,10 @@ neural CDE hidden 64; transformer d_model 32, one layer; Cox and gamma lr 3e-2 f
 | Model (recalibrated) | CRPS ↓ | MAE ↓ | 80 % cov. | 80 % width | C-index ↑ |
 |---|---|---|---|---|---|
 | **transformer** | **0.74 ± 0.06** | **1.04 ± 0.08** | 0.92 | 3.7 d | **0.942** |
-| ODE-RNN | 0.80 ± 0.09 | 1.14 ± 0.13 | 0.92 | 3.9 d | 0.933 |
-| GRU + gap | 0.82 ± 0.04 | 1.15 ± 0.06 | 0.91 | 3.9 d | 0.931 |
+| ODE-RNN | 0.80 ± 0.09 | 1.14 ± 0.13 | 0.92 | 3.9 d | 0.932 |
+| GRU + gap | 0.82 ± 0.04 | 1.15 ± 0.06 | 0.91 | 3.9 d | 0.930 |
 | latent SDE (guided, ours) | 0.85 ± 0.01 | 1.20 ± 0.03 | 0.93 | 4.3 d | 0.932 |
-| GRU-D | 0.88 | 1.25 | 0.91 | — | 0.921 |
+| GRU-D | 0.88 | 1.25 | 0.91 | 4.1 d | 0.920 |
 | neural CDE | 1.10 ± 0.08 | 1.51 ± 0.13 | 0.88 | 5.2 d | 0.898 |
 | gamma process | 1.19 ± 0.00 | 1.64 ± 0.04 | 0.87 | 5.7 d | 0.878 |
 | Wiener process | 1.24 ± 0.01 | 1.69 ± 0.01 | 0.87 | 6.1 d | 0.886 |
@@ -340,7 +340,7 @@ neural CDE hidden 64; transformer d_model 32, one layer; Cox and gamma lr 3e-2 f
   7 % for the latent SDE. It extrapolates the fruit's own trend through an Arrhenius clock with no learned network,
   so it has nothing to over-fit to the warm groups. In-distribution it is far behind (CRPS 1.24).
 * The neural CDE and landmark Cox are not competitive anywhere.
-* **A2SL caveat.** The classical models score implausibly well on A2SL (Wiener MAE 0.11, gamma 0.53, Cox C-index 1.0).
+* **A2SL caveat.** The classical models score implausibly well on A2SL (Wiener MAE 0.11, gamma MAE 0.53 and C-index 1.0).
   In A2SL the stage labels are assigned by day, so a model that reads the stage history learns the schedule, not the
   fruit. Those numbers should not be reported as results.
 * **Gamma caveat.** Fitting to the running maximum of the stage labels throws away information when labels go down;
@@ -378,7 +378,7 @@ And it is the best model when photos are sparse, by a clear and significant marg
 ## 4. Bugs found and fixed this week
 
 The first full pipeline run surfaced seven bugs (1–7); each was diagnosed and fixed, and the affected runs were
-repeated. The rate-bias work on 3 November found three more (8–10).
+repeated. The rate-bias work on 3 November found three more (8–10), and later CPU jobs one more (11).
 
 | # | Symptom | Cause | Fix |
 |---|---|---|---|
@@ -415,7 +415,7 @@ model. Fix 5 changes nothing wherever the old computation was finite.
    fixed across seeds, so the error bars don't include split variance.
 4. **Over-wide intervals in-distribution.** Partly an artifact: the metric takes quantiles on whole days, so a
    perfect forecaster scores 0.85–0.88, not 0.80. Post-hoc recalibration brings every distributional model to
-   0.86–0.93 and lowers CRPS 2–5 %, but under transfer to T10 every model still under-covers badly (≤ 0.20).
+   0.86–0.93 and lowers CRPS by up to 8 %, but under transfer to T10 every model except the Wiener process (0.72) still under-covers badly (≤ 0.24).
 5. **A2SL** has only 4 tracked fruit, which is too few for model comparisons, and its day-assigned stage labels leak
    the schedule to any model that reads the stage history (the classical baselines score near-perfectly there).
 6. **The transformer** beats the latent SDE in-distribution and on interpolation (T20, ambient). The latent SDE's

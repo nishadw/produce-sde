@@ -18,11 +18,11 @@ Tables: `outputs/a2sl_views/labels_hidden_std/summary*.md`, `outputs/a2sl_aml_st
   all scans up to now at absolute study days. Score: cut-day population Brier (main), spoiled-now Brier, within-day
   Spearman, earlier-scan log score. 6 folds by fruit × 3 seeds.
 - **AML methods** (`ripen.train.aml.METHODS`): kd (CAML / RepDistiller, γ .1, α .9, T 4), feat (FitNet MSE), kd_feat,
-  rkd / pkt / sp (RepDistiller relational losses, rewritten for `[B, d]` features), samd (reset + shared head + MSE),
+  rkd / pkt / sp (RepDistiller relational losses, rewritten for `[B, d]` features), samd (reset + shared head, i.e. the whole predictor after the encoder, + MSE),
   ours (the lab's `train_ours_partial`: reset + shared head + KD), ours_rkd / ours_pkt / ours_sp, `--paired-only`
   (teacher terms only on scanned fruit; the lab's partial setting without its mismatched unpaired-batch KD term), and
   two controls: `reset_only` (reset schedule, no teaching term) and `--teacher-photo-only`.
-- **Late fusion** (`scripts/analysis/late_fusion.py`, TMC-style): one model per view, forecasts combined by linear
+- **Late fusion** (`scripts/analysis/late_fusion.py`, TMC-style, after the lab's Trusted Multi-View Classification code): one model per view, forecasts combined by linear
   pool, log pool or exp(−entropy)-weighted pool.
 
 ## Results
@@ -69,7 +69,7 @@ fold-mates' outcomes; the raw forecasts are already calibrated for that target. 
 all on CPU. Latent ODE log score / MAE: photo 0.71 / 0.40; + early stopping on the all-visits validation loss
 (`photo_valall`) 0.61 / 0.46; + reset rounds without the teacher phase (`rounds_only`) 0.62 / 0.53; + teacher phase
 with a photo-only teacher (`reset_only_photoT`, the fair baseline) 0.45 / 0.69; microwave teacher (`reset_only`)
-0.44 / 0.68; SAMD 0.41 / 0.72; ours_rkd 0.48 / 0.72. Versus the fair baseline every AML method is within ±0.05
+0.44 / 0.68; SAMD 0.41 / 0.72; ours_rkd 0.48 / 0.72. Versus the fair baseline every reset-style AML method is within ±0.05
 (only reset_only, −0.01, has an interval excluding 0). Latent SDE: photo 0.95, fair baseline 0.90, ours_rkd 0.86,
 samd 0.87, none significant against the fair baseline; the first-round SDE gains (reset_only 0.55, ours_rkd 0.62) did
 not reproduce. The extra predictor training in the teacher phase (fresh optimiser, shared head copied back) makes

@@ -1,4 +1,4 @@
-"""Loaders for the A2SL (University of Alabama ECE) microwave-imaging drops, read from the committed manifests.
+"""Loaders for the A2SL (University of Alabama ECE) microwave-imaging drops, read from the ingested manifests.
 
 ``scripts/data/ingest_a2sl.py`` turns the raw folders into ``data/manifests/a2sl_*.csv`` plus two ``.npz`` scan
 caches. These loaders build :class:`Item` records from the manifests:

@@ -115,21 +115,44 @@ def spoil_interval_from_visits(visits: list[Visit]) -> tuple[float, float]:
 def subsample_visits(item: Item, every: int, offset: int = 0) -> Item:
     """Keep every ``every``-th visit (by index, starting at ``offset``), then recompute the spoilage interval.
 
-    This is how "photos every other day" is simulated from daily data: the
-    censoring interval widens because spoilage is only seen at a kept visit.
-    Visits after the first spoiled visit are dropped. The first visit is always kept.
+    This is how "photos every other day" is simulated from daily data. Visit index ``i`` is on the schedule if
+    ``i == 0`` (the first visit is always kept) or ``(i - offset) % every == 0``. Loaders stop each item at its
+    first spoiled visit ``k``. Spoilage persists, so under the sparser schedule the fruit is first *seen* spoiled
+    at the first scheduled index ``k' >= k``:
+
+    - ``k`` on the schedule: the kept visits end at visit ``k``; the interval is
+      ``(t of the last kept visit before k, t_k]``.
+    - ``k`` off the schedule: the loaders drop every photo after ``k``, so ``t_{k'}`` is extrapolated as
+      ``t_k + (k' - k) * dt`` with ``dt`` the item's median visit spacing (1 day for the daily avocado data).
+      The interval widens to ``(t of the last kept visit before k, t_{k'}]`` and the item stays uncensored.
+      The visible visits end at that last kept unspoiled visit, so the off-schedule spoiled photo is never an
+      input. ``meta["subsample"]["hi_extrapolated"]`` is ``True`` for these items.
+    - no spoiled visit (right-censored): still right-censored, at the last kept visit.
+
+    ``every == 1`` returns the item unchanged.
     """
     if every < 1:
         raise ValueError("every must be >= 1")
-    kept = [v for i, v in enumerate(item.visits) if i == 0 or (i - offset) % every == 0]
-    out: list[Visit] = []
-    for v in kept:
-        out.append(v)
-        if v.stage is not None and v.stage >= SPOILED_STAGE:
-            break
-    lo, hi = spoil_interval_from_visits(out)
-    if math.isinf(hi) and not item.right_censored:
-        # spoilage happened after the last kept visit but inside the original window:
-        # still only known to be after `lo`, so it is right-censored at the kept resolution.
-        pass
-    return replace(item, visits=out, spoil_lo=lo, spoil_hi=hi)
+    if every == 1:
+        return item
+
+    def on_schedule(i: int) -> bool:
+        return i == 0 or (i - offset) % every == 0
+
+    k = next((i for i, v in enumerate(item.visits) if v.stage is not None and v.stage >= SPOILED_STAGE), None)
+    end = len(item.visits) if k is None else k + 1
+    out = [v for i, v in enumerate(item.visits[:end]) if on_schedule(i)]
+    meta = {**item.meta, "subsample": {"every": every, "offset": offset, "hi_extrapolated": False}}
+    if k is None or on_schedule(k):
+        lo, hi = spoil_interval_from_visits(out)
+        return replace(item, visits=out, spoil_lo=lo, spoil_hi=hi, meta=meta)
+    # k is off the schedule (so k > 0 and `out` holds only unspoiled visits): first seen spoiled at k' > k
+    k_next = k + 1
+    while not on_schedule(k_next):
+        k_next += 1
+    gaps = np.diff([v.t for v in item.visits[: k + 1]])
+    gaps = gaps[gaps > 0]
+    dt = float(np.median(gaps)) if gaps.size else 1.0
+    hi = float(item.visits[k].t + (k_next - k) * dt)
+    meta["subsample"]["hi_extrapolated"] = True
+    return replace(item, visits=out, spoil_lo=out[-1].t, spoil_hi=hi, meta=meta)

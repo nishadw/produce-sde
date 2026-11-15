@@ -38,7 +38,7 @@ probability score (lower is better for both).
 | 2026-11-06 | [Mango: photo vs microwave](docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md) (48 lab fruit) | Microwave scans clearly beat photos; no model beats a known-age reference. |
 | 2026-11-10 | [Avocado: microwave scanner views](docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md) | The 0°, 120° and 240° rotation views beat 60°, 180° and 300° (14 of 16 paired tests). |
 | 2026-11-12 | [Views × time-series models × AML](docs/experiments/2026-11-12_views-time-series-models-and-aml/report.md) | Latent ODE is the best model on both fruits. Teacher-student gains on avocados come from the training schedule, not the scanner. |
-| 2026-11-13 | [Results brief: ODE, SDE, AML](docs/experiments/2026-11-13_results-brief-ode-sde-aml/README.md) | The scanner barely helps even the teacher (0.66 vs 0.71); every gain over photo-only comes from training rounds. |
+| 2026-11-13 | [Results brief: ODE, SDE, AML](docs/experiments/2026-11-13_results-brief-ode-sde-aml/README.md) | The scanner barely helps even the teacher (0.66 vs 0.71); every gain over photo-only comes from the take-turns training schedule (teacher phase + copy back), not the scanner. |
 
 ## Quickstart
 

@@ -18,7 +18,7 @@ rule (`labels="jmw2026"`), mapping classes 0–4 to stages 1–5 with stage 5 = 
 fruit's spoilage interval is (day 7, day 9]. The other two sets stay unlabelled.
 
 Raw files live under `data/a2sl/` (never committed, ~0.5 GB). `python scripts/data/ingest_a2sl.py` converts the
-HEIC photos to 1024-px JPEG and writes the manifests under `data/manifests/` (committed) and two `.npz` scan
+HEIC photos to 1024-px JPEG and writes the manifests under `data/manifests/` (not committed; the script regenerates them) and two `.npz` scan
 caches (not committed).
 
 ## 1. `avocado_jun2023` — the longitudinal set
