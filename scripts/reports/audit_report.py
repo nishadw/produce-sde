@@ -79,7 +79,7 @@ table(
     [
         ["Files changed", "80 of 297 tracked files"],
         ["Rounds", "5: one builder pass (5 agents), three verify-and-fix rounds, one convergence check"],
-        ["Bugs that change results", "1: photo-every-2nd/3rd-day runs (fixed; runs need rerunning)"],
+        ["Bugs that change results", "1: photo-every-2nd/3rd-day runs (fixed and rerun; the sparse-photo win goes away)"],
         ["Bugs with no effect on past results", "3: a clock flag that was ignored, a rerun-script edge case, 2 weak tests"],
         ["Wrong statements fixed", "dozens in reports, docs and the brief (numbers, method descriptions, paths)"],
         ["Checked and correct", "all core math (PDE solver, bridge factors, Girsanov KL, metrics), all copied tables"],
@@ -99,10 +99,11 @@ bullets(
     [
         ("Affected: ", "the every-2nd/3rd-day rows of the 28 Oct avocado study (Round 1, Round 2b, new baselines, "
          "paired tests) and the README headline 'latent SDE CRPS 0.97 at a photo every 3rd day'."),
-        ("Done: ", "old runs moved to outputs/_superseded_subsample_bug_2026-11-14/ (kept, not deleted); every place "
-         "that cites those numbers is marked provisional."),
-        ("To do: ", "run bash run_umiacs.sh sparse (new stage; about 8 GPU-hours, ~1.5 h wall clock), then update "
-         "the E4 tables and the headline. I did not submit it: it needs your go-ahead."),
+        ("Done: ", "old runs moved to outputs/_superseded_subsample_bug_2026-11-14/ (kept, not deleted); rerun on "
+         "15 Nov (bash run_umiacs.sh sparse, 30 jobs) plus the paired tests; tables, figure and text updated."),
+        ("What changed: ", "the latent SDE is no longer the clear winner with sparse photos. Every 3rd day its CRPS is "
+         "1.30 (was 0.97), tied with GRU-D (1.27) and the transformer (1.20); it still beats the Wiener process. "
+         "Every 2nd day the transformer is significantly better. All 65 spoiling test fruit now count at every rate."),
     ]
 )
 
@@ -151,7 +152,6 @@ doc.add_paragraph(
 doc.add_heading("5. Open questions for you", level=2)
 bullets(
     [
-        ("Approve the rerun: ", "bash run_umiacs.sh sparse."),
         ("Paper wording: ", "the properness result we cite (Yanagisawa & Akiyama) may be stated under a "
          "'constant-sum condition', not 'independent monitoring'; check the theorem."),
         ("Data naming: ", "some files call the lab avocado set 'A2SL / Stevens', others 'University of Alabama'."),

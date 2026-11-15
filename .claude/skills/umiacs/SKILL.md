@@ -45,7 +45,7 @@ RIPEN_AFTER=<jobid> bash run_umiacs.sh all   # make every submitted job wait on 
 Every job logs to `outputs/logs/ripen-<name>-<jobid>.out`. One-off commands:
 ```bash
 sbatch -p class -A class -q default --gres=gpu:1 -c 4 --mem=16G -t 2:00:00 -o outputs/logs/%x-%j.out \
-  -J ripen-adhoc --wrap "source .ripen.env && source \$RIPEN_ENV/bin/activate && python scripts/run/train.py model=latent_sde data=avocado"
+  -J ripen-adhoc --wrap "source ./.ripen.env && source \$RIPEN_ENV/bin/activate && python scripts/run/train.py model=latent_sde data=avocado"
 srun -p class -A class -q default --gres=gpu:1 -c 4 --mem=16G -t 1:00:00 --pty bash   # interactive
 ```
 

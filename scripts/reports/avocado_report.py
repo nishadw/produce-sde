@@ -123,8 +123,8 @@ for lead, txt in [
         "when trained on two storage temperatures and tested on a third it never saw, the temperature rule cuts the error by 1.5 to 3 times (figure below).",
     ),
     (
-        "Needs fewer photos: ",
-        "with a photo only every third day it had the lowest error of every model tested (1.4 days off; 1.5 for our model without randomness and 1.9 to 2.6 for the rest). These sparse-photo numbers are provisional: a bug that treated some spoiled fruit as never spoiling was fixed on 14 Nov 2026 and they are being recomputed.",
+        "Fewer photos: ",
+        "with a photo only every third day it is about 1.8 days off, level with the two best standard AI models (1.6 to 1.8 days) and ahead of the classic statistics models (2.0 to 3.0). An earlier version said it was clearly best here; that came from a bug, fixed on 14 Nov 2026, that treated some spoiled fruit as never spoiling.",
     ),
     (
         "Weak spot: ",
