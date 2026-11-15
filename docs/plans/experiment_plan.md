@@ -17,7 +17,7 @@ Claims (see `docs/plans/research_plan.md`, `docs/background/theory.md`):
 ## 0. One-time setup
 
 ```bash
-git clone https://github.com/nishadw/neural-sde-first-passage && cd neural-sde-first-passage
+git clone https://github.com/nishadw/produce-sde && cd produce-sde
 bash run_umiacs.sh setup                 # venv at ~/envs/ripen, editable install, CPU tests + smoke
 ```
 

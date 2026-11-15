@@ -1,3 +1,6 @@
+> *Archived (2026-10-20 / 2026-11-03). Later avocado results (Round 2 onward) use the guided posterior via command-line
+> overrides; see `docs/progress_log.md` for the current state.*
+
 # Verifier report — PDE first-passage likelihood (2026-10-20)
 
 *Independent review by a verifier agent of `fpt_pde.py`, `latent.py`, the metrics and `theory.md`, with its

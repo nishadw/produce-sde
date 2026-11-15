@@ -56,7 +56,7 @@ retailer acting on "1-in-5 chance it is bad by Tuesday" can price by risk.
 - **First passage**: `τ = inf{t : R_t ≥ b}` for a scalar coordinate `R` and boundary `b`. For constant drift
   and diffusion `τ` is **inverse-Gaussian**; for general `μ, σ` there is no closed form — but the survival
   function `S(s, r)` solves the **backward Kolmogorov equation**
-  `∂_s S = μ(r) ∂_r S + ½ σ(r)² ∂_rr S` with `S(s, b) = 0`, which a finite-difference solver handles exactly.
+  `∂_s S = μ(r) ∂_r S + ½ σ(r)² ∂_rr S` with `S(s, b) = 0`, which a finite-difference solver handles up to discretisation error.
 
 → `src/nsde/solve.py`, `src/ripen/models/latent.py`, `src/ripen/models/fpt_pde.py`.
 
@@ -119,7 +119,8 @@ conditions — on image or sensor sequences, with calibration reported. See `ven
 ## 8. Glossary
 
 ELBO · evidence lower bound. Girsanov · the theorem giving the KL between two diffusions with the same
-diffusion coefficient. Markov-interval likelihood · the product of inter-visit survival probabilities.
+diffusion coefficient. Markov-interval likelihood · the product of inter-visit bridge no-crossing probabilities and the last
+interval's crossing probability (`theory.md` P1).
 Monotone scheme · a finite-difference scheme that preserves ordering (no spurious oscillation). Péclet number ·
 drift × grid step / diffusion; decides central vs upwind differencing. Proper score · see §2. Q10 · rate ratio
 per 10 °C. Rannacher start-up · two implicit-Euler steps before Crank–Nicolson to damp a discontinuous initial

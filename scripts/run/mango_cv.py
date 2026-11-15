@@ -3,8 +3,9 @@
 python scripts/run/mango_cv.py --model latent_sde --setting samd --seeds 1 2 3
 python scripts/run/mango_cv.py --model refs        # closed-form references + firmness/stage read-outs
 
-Settings (``ripen.data.mango``): ``rgb`` photo only; ``mw`` microwave only; ``both`` photo + microwave;
-``samd`` photo-only student distilled from a photo + microwave teacher (``ripen.train.samd``). Every model is scored
+Settings (``ripen.data.mango``): ``rgb`` photo only; ``mw`` microwave only; ``both`` photo + microwave; ``time`` no
+features (the age control); or an AML method from ``ripen.train.aml.METHODS`` (e.g. ``samd``, ``kd``): a photo-only
+student distilled from a photo + microwave teacher (``ripen.train.aml`` / ``ripen.train.samd``). Every model is scored
 on the same fruit, at the same moment (its cut day), with ``ripen.eval.mango`` — see that module for the scores.
 
 Outputs: ``outputs/mango/seed<S>/<model>_<setting>/{metrics.json, predictions.npz, history_fold<k>.csv}``.

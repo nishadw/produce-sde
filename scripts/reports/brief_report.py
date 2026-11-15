@@ -1,6 +1,7 @@
 """Short presentation brief: one section per model (what it is, then its scores) (report env).
 
-Run brief_figs.py first (ripen env; writes br_*.png and brief_numbers.json). Writes results/2026-11-13_results-brief-ode-sde-aml.docx.
+Run brief_figs.py first (ripen env; writes br_*.png and brief_numbers.json to outputs/report_figures). Writes
+2026-11-13_results-brief-ode-sde-aml.docx to ../results (``_paths.RESULTS``, outside the repository).
 """
 
 import json
@@ -192,7 +193,8 @@ doc.add_heading("2. Teaching a photo-only model with the scanner (auxiliary moda
 para(
     "The scanner is not available everywhere, so the aim is a student model that needs only photos at test time but "
     "learned, during training, from a teacher that also saw the scans. The methods differ in three choices: is the "
-    "teacher fixed or rebuilt each round, does the student share the teacher's final layer, and what the student "
+    "teacher fixed or rebuilt each round, does the student take over the teacher's predictor (every layer after the "
+    "encoder), and what the student "
     "copies. All are ported from the lab's RepDistiller code (train_student.py, distiller_zoo/).",
     size=9.5,
 )
@@ -209,14 +211,14 @@ DESC = [
      "How the teacher arranges fruit: pairwise distances and triplet angles", "Park et al., CVPR 2019"),
     ("teacher", "Teacher", "—", "—", "— (it sees the scanner at test time)", "Reference; needs the scanner"),
 ]  # fmt: skip
-table(["Method", "Teacher", "Shared final layer", "What the student copies", "Source / note"],
+table(["Method", "Teacher", "Shared predictor","What the student copies", "Source / note"],
       [[lab, t, sh, c, n] for _, lab, t, sh, c, n in DESC], [1.25, 1.85, 0.7, 1.85, 1.45], highlight=(1,),
       left=(0, 1, 3, 4), size=8)  # fmt: skip
 para(
     "Rebuilt each round (SAMD, lab methods, take-turns control): copy the student's weights into the teacher (scanner "
-    "inputs start at zero), train the teacher a few epochs with the scans, hand its final layer back to the student, "
-    "then train the student a few epochs. Knowledge distillation (KD) = 0.1 × the student's own loss + 0.9 × match "
-    "to the teacher's softened forecast (temperature 4), as in the lab scripts. Relational knowledge distillation "
+    "inputs start at zero), train the teacher a few epochs with the scans, hand its predictor (the dynamics and "
+    "output layers after the encoder) back to the student, then train the student a few epochs. Knowledge "
+    "distillation (KD) = 0.1 × the student's own loss + 0.9 × match to the teacher's softened forecast (temperature 4), as in the lab scripts. Relational knowledge distillation "
     "(RKD) matches distances and angles between fruit rather than the fruit themselves.",
     size=8.5,
     color=GREY,
@@ -244,7 +246,7 @@ bullet(
 )
 bullet(
     f" {lab[best]} ({f2(a('latent_ode', best))}) ties the take-turns control ({f2(a('latent_ode', 'reset_only_photoT'))}), "
-    "which never sees the scanner. The gain is the rebuild-and-share-final-layer schedule, not the scans.",
+    "which never sees the scanner. The gain is the rebuild-and-share-predictor schedule, not the scans.",
     lead="Gains come from the training rounds:",
 )
 bullet(

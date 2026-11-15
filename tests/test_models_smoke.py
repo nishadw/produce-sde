@@ -40,7 +40,7 @@ def test_sequence_encoders_ignore_hidden_visits(synthetic_items, synthetic_info)
     """Changing a visit beyond n_obs must not change the prediction."""
     items = synthetic_items[:4]
     b1 = collate(items, synthetic_info, n_obs=2)
-    feat2 = b1.feat.at[:, 3:].set(99.0)
+    feat2 = b1.feat.at[:, 2:].set(99.0)  # n_obs=2: visits 2.. are hidden
     b2 = eqx.tree_at(lambda b: b.feat, b1, feat2)
     for name in ("gru_gap", "gru_d", "ode_rnn", "neural_cde", "transformer"):
         model = build_model({"name": name, "horizon": HORIZON}, synthetic_info, jax.random.PRNGKey(0))

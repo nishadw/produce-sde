@@ -30,5 +30,5 @@ for d, width, n_paths in [(16, 64, 16), (16, 64, 32), (16, 64, 64), (16, 32, 32)
     rows.append(row)
     print(row, flush=True)
 
-(ROOT / "foundations" / "outputs").mkdir(exist_ok=True)
-json.dump(rows, open(ROOT / "foundations" / "outputs" / "adjoint_memory_scaling.json", "w"), indent=2)
+(ROOT / "foundations" / "results").mkdir(exist_ok=True)
+json.dump(rows, open(ROOT / "foundations" / "results" / "adjoint_memory_scaling.json", "w"), indent=2)

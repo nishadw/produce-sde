@@ -1,7 +1,7 @@
 # Theory notes
 
-*Statements P1–P4 of `docs/plans/research_plan.md`, written out. Notation: visits at `t_0 < … < t_n`, latent
-`Z = (R, U)`, progression `R` with prior `dR = κ μ(R) dt + σ(R) dW`, boundary `b`, event `τ = inf{t : R_t ≥ b}`,
+*Statements P1–P5 of `docs/plans/research_plan.md`, written out. Notation: visits at `t_0 < … < t_n`, latent
+`Z = (R, U)`, progression `R` with prior `dR = κ μ(R) dt + √κ σ(R) dW`, boundary `b`, event `τ = inf{t : R_t ≥ b}`,
 physiological time `s = κ t`, survival `S̃(s | r) = P(no crossing within physiological time s | R(0) = r)`.
 Working notes for the write-up; verifier pass done 2026-10-20 (`docs/archive/verifier_report.md`).*
 
@@ -77,7 +77,7 @@ identify `E_a`.
 `κ_g ∫ E[μ(R_s)] ds`, so for the linear drift `κ_g` is the slope of the mean stage vs time (the regression the
 original paper fits, Table 4), and the ratio of two groups' slopes is `κ_g/κ_{g'}` regardless of `μ`'s scale.
 `E_a = R ln(κ_1/κ_2) / (1/T_2 − 1/T_1)`. The synthetic recovery test (`tests/test_recovery.py`) is the
-empirical check: rates within 25 %, `σ` within 50 % with 180 fake fruit.
+empirical check: rate ratios within 15 % (absolute rates within 20 %), `σ` within 50 % with 180 fake fruit.
 
 **Correction (2026-11-03): the common factor is identified; the ELBO was biased.** An earlier version of this
 caveat claimed the absolute rate scale is confounded with the latent origin, because the bottom stage is open

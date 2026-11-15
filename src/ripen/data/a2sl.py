@@ -4,9 +4,10 @@
 caches. These loaders build :class:`Item` records from the manifests:
 
 * :func:`load_a2sl_avocado` — 15 avocados scanned every other day. Four were followed for all seven visits;
-  seven were cut open at one visit each (destructive check, not spoilage). No ripeness stage was recorded, so
-  every item is **right-censored at its last visit** and carries ``stage=None``: the set trains the generative
-  (feature-decoding) part of the latent SDE and the multimodal encoder, not the spoilage head.
+  seven were cut open at one visit each (destructive check, not spoilage). No per-fruit ripeness stage was
+  recorded; by default (``labels="jmw2026"``) every visit gets the published day-determined class, and with
+  ``labels=None`` every item is **right-censored at its last visit** with ``stage=None`` (the set then trains only
+  the generative, feature-decoding part of the latent SDE and the multimodal encoder, not the spoilage head).
 * :func:`load_a2sl_pilot` — 6 avocados photographed daily for 13 days (4 views), cut on staggered days.
 * :func:`load_a2sl_watermelon` — 7 watermelons, one visit each, text ripeness label; snapshot data.
 

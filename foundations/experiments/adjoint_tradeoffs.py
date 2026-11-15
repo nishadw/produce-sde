@@ -1,6 +1,6 @@
 """Memory, time, and gradient accuracy of three ways to differentiate an SDE solve.
 
-For a neural SDE (16-dim state, 64 sample paths) and an increasing number of
+For a neural SDE (16-dim state, 32 sample paths; 16 with --quick) and an increasing number of
 solver steps, compare:
 
   backprop    reverse-mode AD through every step (one checkpoint per step)
@@ -148,8 +148,8 @@ def main(quick=False):
         )
 
     (ROOT / "foundations" / "assets").mkdir(exist_ok=True)
-    (ROOT / "foundations" / "outputs").mkdir(exist_ok=True)
-    json.dump(out, open(ROOT / "foundations" / "outputs" / "adjoint_tradeoffs.json", "w"), indent=2)
+    (ROOT / "foundations" / "results").mkdir(exist_ok=True)
+    json.dump(out, open(ROOT / "foundations" / "results" / "adjoint_tradeoffs.json", "w"), indent=2)
 
     plot(out, steps)
 
@@ -157,10 +157,10 @@ def main(quick=False):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
-    ap.add_argument("--plot-only", action="store_true", help="re-plot from foundations/outputs/adjoint_tradeoffs.json")
+    ap.add_argument("--plot-only", action="store_true", help="re-plot from foundations/results/adjoint_tradeoffs.json")
     a = ap.parse_args()
     if a.plot_only:
-        out = json.load(open(ROOT / "foundations" / "outputs" / "adjoint_tradeoffs.json"))
+        out = json.load(open(ROOT / "foundations" / "results" / "adjoint_tradeoffs.json"))
         plot(out, out["backprop"]["steps"])
     else:
         main(a.quick)

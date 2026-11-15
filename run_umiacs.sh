@@ -132,7 +132,7 @@ stage_e4() {
 }
 
 stage_e6() {
-  # the manifests are committed but the raw A2SL data (scans, photos) is not; without it e6 would fail and block summary
+  # the raw A2SL data (scans, photos) is not in git; without it e6 would fail and block summary
   [[ -f data/a2sl/scans_avocado_jun2023.npz ]] || { echo "e6 skipped: data/a2sl not present (docs/data/data_a2sl.md)" >&2; return; }
   for m in gru_d latent_sde fpt_filter; do JOBS[e6_$m]=$(submit "e6-$m" "$PY scripts/run/train.py model=$m data=a2sl horizon=20 train.batch_size=8"); done
   JOBS[e6_gen]=$(submit e6-generative "$PY scripts/run/train.py model=latent_sde data=a2sl horizon=20 train.batch_size=8 model.decode_features=true run_name=latent_sde_a2sl_generative")
@@ -255,6 +255,8 @@ stage_mango() {
       "for seed in 1 2 3; do JAX_PLATFORMS=cpu $PY scripts/run/mango_cv.py --model $m --setting $s --seeds \$seed || exit 1; done")
     deps+=("${JOBS[mango_${m}_$s]}")
   done; done
+  local post="$PY scripts/analysis/mango_summary.py"
+  if [[ $LOCAL -eq 1 ]]; then bash -c "$post"; return; fi
   JOBS[mango_summary]=$(sbatch --parsable --job-name=ripen-mango-summary --output="outputs/logs/%x-%j.out" --time=00:30:00 \
     --cpus-per-task=1 --mem=4G --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" \
     --dependency=afterany:$(IFS=:; echo "${deps[*]}") \
@@ -290,6 +292,8 @@ stage_a2sl_views() {
       mkdir -p "$root/$(basename "$(dirname "$d")")"; ln -sfn "$(realpath "$d")" "$root/$(basename "$(dirname "$d")")/$(basename "$d")"
     done; done
   fi
+  local post="$PY scripts/analysis/a2sl_views_summary.py --root $root && $PY scripts/analysis/a2sl_views_summary.py --root $root --recal"
+  if [[ $LOCAL -eq 1 ]]; then JAX_PLATFORMS=cpu bash -c "$post"; return; fi
   JOBS[views_summary]=$(sbatch --parsable --job-name=ripen-views-summary --output="outputs/logs/%x-%j.out" --time=00:30:00 \
     --cpus-per-task=1 --mem=8G --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" \
     --dependency=afterany:$(IFS=:; echo "${deps[*]}") \
@@ -316,6 +320,8 @@ stage_a2sl_aml() {
     fi
     deps+=("$j"); n=$((n + 1))
   done
+  local post="$PY scripts/analysis/a2sl_aml_summary.py --root $out && $PY scripts/analysis/a2sl_aml_summary.py --root $out --recal"
+  if [[ $LOCAL -eq 1 ]]; then JAX_PLATFORMS=cpu bash -c "$post"; return; fi
   JOBS[aml_summary]=$(sbatch --parsable --job-name=ripen-aml-summary --output="outputs/logs/%x-%j.out" --time=00:30:00 \
     --cpus-per-task=1 --mem=8G --account="$RIPEN_ACCOUNT" --partition="$RIPEN_PARTITION" --qos="$RIPEN_QOS" \
     --dependency=afterany:$(IFS=:; echo "${deps[*]}") \
@@ -323,7 +329,8 @@ stage_a2sl_aml() {
   JOBS[aml_n]=${#deps[@]}
 }
 
-# mango views / time series / AML (docs/plans/views_aml_plan.md): RIPEN_MANGO_RUNS holds one mango_cv.py argument
+# mango views / time series / AML (docs/experiments/2026-11-12_views-time-series-models-and-aml/):
+# RIPEN_MANGO_RUNS holds one mango_cv.py argument
 # list per line, each its own 2-CPU job, into outputs/mango_views; RIPEN_MANGO_GPU=1 puts them on a GPU instead
 stage_mango_views() {
   local deps=() j x

@@ -12,4 +12,4 @@ derivation, an Arrhenius fit, and Brownian-bridge replay.
 | `build/` | Figure and deck generators from earlier versions (`python figs.py`, `node build_deck.js`) |
 
 **Figure credits.** The paper figures are from Xavier, Rodrigues & Silva, *Foods* 13(8):1150, 2024,
-[doi:10.3390/foods13081150](https://doi.org/10.3390/foods13081150), CC BY 3.0. Some are cropped.
+[doi:10.3390/foods13081150](https://doi.org/10.3390/foods13081150), CC BY 4.0. Some are cropped.

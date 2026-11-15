@@ -23,8 +23,8 @@ plt.rcParams.update({
 })
 
 calib = json.load(open(HERE / "calib_frames.json"))
-final = json.load(open(REPO / "foundations" / "outputs" / "local_vol_calibration.json"))
-sweep = json.load(open(REPO / "foundations" / "outputs" / "adjoint_tradeoffs.json"))
+final = json.load(open(REPO / "foundations" / "results" / "local_vol_calibration.json"))
+sweep = json.load(open(REPO / "foundations" / "results" / "adjoint_tradeoffs.json"))
 demo_out = (HERE / "demo_out.txt").read_text().splitlines()
 demo_out = [l for l in demo_out if "cpu" not in l]          # drop the `time` line
 pytest_out = [l for l in (HERE / "pytest_out.txt").read_text().splitlines() if l.strip()]

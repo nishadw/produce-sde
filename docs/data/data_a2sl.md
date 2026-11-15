@@ -12,7 +12,7 @@ Wu, Choffin, Kong, Lee, Sun & Jeong, *Noninvasive Microwave Imaging and Machine 
 Avocados*, IEEE J. Microwaves 6(1):273–284, 2026 (doi:10.1109/JMW.2025.3636171, CC BY 4.0), whose Fig. 4 shows
 all 210 scan images with their class: **every image of a given study day has the same class** — Day 1 → 0
 unripe, Day 3 → 1 barely ripe, Day 5 → 2 ripe, Day 7 → 3 almost overripe, Days 9–13 → 4 overripe (30 images per
-class for 0–3, 90 for class 4 = 5 fruit × 6 angles per visit). The classes were validated by skin lightness
+class for 0–3 = 5 fruit × 6 angles per visit, 90 for class 4 over its three visits). The classes were validated by skin lightness
 (colorimeter, L\*), a penetrometer on fruit 12–15, and the fruit cut open each day. The loader applies this
 rule (`labels="jmw2026"`), mapping classes 0–4 to stages 1–5 with stage 5 = end of shelf life, so every tracked
 fruit's spoilage interval is (day 7, day 9]. The other two sets stay unlabelled.

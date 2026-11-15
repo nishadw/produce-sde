@@ -12,7 +12,7 @@ Three sets live under ``data/a2sl/`` (raw, never committed):
 * ``watermelon_2022/`` — 7 watermelons, each scanned once at up to 5 heights x 5 rotations x 5 frequencies
   (3-5 GHz, 96x96 "ImagePoints" grids); ripeness is a text label from the purchase log.
 
-Outputs (``data/manifests/*.csv`` are committed; ``*.npz`` and converted JPEGs are not):
+Outputs (none committed: data/ is git-ignored; rerun this script to regenerate them):
 
     data/manifests/a2sl_avocado_items.csv      one row per avocado: cut day, tracked-to-end flag, mass, size
     data/manifests/a2sl_avocado_visits.csv     one row per (avocado, visit): day, photo paths, scan keys

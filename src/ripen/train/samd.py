@@ -12,7 +12,8 @@ predictor ``D`` (everything after them), and ``D`` is shared. Training runs ``t`
 
 ``L_con`` is the mean squared distance between the student's and the (frozen) teacher's features on the same fruit
 at the same moment. The paper uses SGD at lr 1e-3, ``k = 5``; ``t`` until the student converges. Here the student is
-early-stopped on its validation loss across rounds.
+early-stopped on its validation loss across rounds, computed with every visit visible (``n_obs="all"``); the teacher
+phase always trains on random visible prefixes.
 
 Every model in ``ripen.models`` with a ``visit_enc`` qualifies; its features are what the predictor reads:
 ``context`` (sequence models), the posterior context (latent SDE/ODE) or the visit embedding (FPT filter).

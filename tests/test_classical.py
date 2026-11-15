@@ -33,7 +33,7 @@ def test_gamma_passage_matches_simulation():
 def test_classical_ignore_hidden_visits(synthetic_items, synthetic_info):
     items = synthetic_items[:4]
     b1 = collate(items, synthetic_info, n_obs=2)
-    b2 = eqx.tree_at(lambda b: b.stage, b1, b1.stage.at[:, 3:].set(5))
+    b2 = eqx.tree_at(lambda b: b.stage, b1, b1.stage.at[:, 2:].set(5))  # n_obs=2: visits 2.. are hidden
     for name in ("wiener", "gamma_process", "landmark_cox"):
         model = build_model({"name": name, "horizon": 12}, synthetic_info, jax.random.PRNGKey(0))
         F1, F2 = model.predict_cdf(b1, jax.random.PRNGKey(0)), model.predict_cdf(b2, jax.random.PRNGKey(0))

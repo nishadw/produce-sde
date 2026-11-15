@@ -151,8 +151,8 @@ def main(quick=False):
         },
     }
     print(json.dumps(res["iv_rmse_vol_pts"], indent=2))
-    (ROOT / "foundations" / "outputs").mkdir(exist_ok=True)
-    json.dump(res, open(ROOT / "foundations" / "outputs" / "local_vol_calibration.json", "w"), indent=2)
+    (ROOT / "foundations" / "results").mkdir(exist_ok=True)
+    json.dump(res, open(ROOT / "foundations" / "results" / "local_vol_calibration.json", "w"), indent=2)
 
     # ---- figures
     fig, axes = plt.subplots(1, 4, figsize=(15, 3.7), gridspec_kw={"width_ratios": [1, 1, 1, 1.15]})

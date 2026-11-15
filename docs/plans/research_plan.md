@@ -39,8 +39,8 @@ outputs from image sequences. We do all three; (i) is the headline.
 Latent `Z = (R, U)`: `R` is the scalar **progression** coordinate, `U ∈ ℝ^{d−1}` carries appearance.
 
 ```
-prior      dR = κ(x)·μ_R(R) ds + σ_R(R) dW_R                     (autonomous in R)
-           dU = κ(x)·μ_U(R, U) ds + σ_U(R, U) dW_U
+prior      dR = κ(x)·μ_R(R) dt + √κ(x)·σ_R(R) dW_R               (autonomous in R)
+           dU = κ(x)·μ_U(R, U) dt + √κ(x)·σ_U(R, U) dW_U
 posterior  drift += g_φ(Z, ctx, t)   for t ≤ t_now              (Li et al. 2020 latent SDE)
 clock      κ(x) = κ_ref · exp(−E_a/R_gas (1/T − 1/T_ref))       (Arrhenius; or a learned per-group rate)
 stages     stage_k ~ Ordinal(R(t_k))        thresholds θ_1 < … < θ_{K−1}
@@ -91,7 +91,7 @@ one, and the Monte Carlo running-max the ablation.
 |---|---|---|
 | P1 | *Exactness.* Under the progression-structured model the product of bridge no-crossing factors times the last-interval survival difference equals the likelihood of the censoring observations. | Markov property of the prior diffusion; proof in `docs/background/theory.md`; verified numerically (`docs/archive/verifier_report.md`) |
 | P2 | *Properness.* Under independent monitoring (visit times ⊥ event given covariates) the interval-censored log-likelihood is a strictly proper scoring rule for the event distribution; Survival-CRPS is not (Rindt et al. 2022). | Follows Yanagisawa & Akiyama (ICML 2026); we state it for our likelihood and use it as both loss and metric |
-| P3 | *Identifiability of the clock.* The rate *ratios* `κ(x)/κ(x')` — hence the Arrhenius `E_a` — and the forecast CDF are identified from the stage trajectories; the common factor is confounded with the latent origin and is pinned by the `z₀` prior. | Scale argument on `(μ_R, σ_R, κ, θ, z₀)`; `tests/test_recovery.py` (ratios within 15 %, `E_a` within 15 %, CDF within 0.15) |
+| P3 | *Identifiability of the clock.* The rate *ratios* `κ(x)/κ(x')` — hence the Arrhenius `E_a` — and the forecast CDF are identified from the stage trajectories; the common factor is confounded with the latent origin and is pinned by the `z₀` prior (superseded 2026-11-03: the common factor is identified too, see `docs/background/theory.md` P3). | Scale argument on `(μ_R, σ_R, κ, θ, z₀)`; `tests/test_recovery.py` (ratios within 15 %, `E_a` within 15 %, CDF within 0.15) |
 | P4 | *Numerics.* The finite-difference scheme converges to `S̃` as the grid is refined, and for constant drift it matches the inverse-Gaussian law. | `tests/test_fpt_pde.py` |
 | P5 | *Exact inference.* The grid filter computes the marginal likelihood of stages, photo emissions and the censoring observation without a variational posterior; absolute rates, `σ` and the forecast CDF are recovered. | `tests/test_recovery.py::test_exact_filter_*`, brute-force comparison in `docs/background/theory.md` P5 |
 | E1 | Beats the two published point-estimate models on the avocado data on MAE-PO and gives calibrated intervals; keeps the censored fruit they dropped. | Mendeley avocado, all 8 model families, one protocol |
@@ -121,7 +121,7 @@ one, and the Monte Carlo running-max the ablation.
   to the MC estimator.
 - **Tamb faster than T20 in the avocado data.** A mean-temperature Arrhenius law cannot fit all three groups;
   the per-group clock is the comparator and the paper says so.
-- **Compute.** PDE solve: a 160-point grid × ~3,000 explicit steps per batch, vectorised; cheaper than 64
+- **Compute.** PDE solve: a 160-point grid × ~3,000 implicit (Crank–Nicolson) steps per batch, vectorised; cheaper than 64
   simulated paths per item.
 
 ## 7. Order of work from here

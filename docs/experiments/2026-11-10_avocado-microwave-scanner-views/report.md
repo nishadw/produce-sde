@@ -1,8 +1,9 @@
 # A2SL avocados: which microwave view predicts best, and AML from microwave to photos
 
 Requested by Prof. Ming (2026-11-07): a time-series model per microwave view, the best view, then AML / CAML
-(photo + microwave teacher distilled to a photo-only student). Plain-language version: `summary.docx`
-(`scripts/reports/a2sl_views_figs.py`, then `scripts/reports/a2sl_views_report.py`).
+(photo + microwave teacher distilled to a photo-only student). Plain-language version:
+`../results/2026-11-10_avocado-microwave-scanner-views.docx`, outside the repo (`scripts/reports/a2sl_views_figs.py`,
+then `scripts/reports/a2sl_views_report.py`).
 
 ## Data and protocol
 
@@ -11,7 +12,7 @@ Requested by Prof. Ming (2026-11-07): a time-series model per microwave view, th
   (0, 60, ..., 300°), each a 75x75 reconstruction; 35 scans, 25 after truncating at the first stage-5 visit.
 - Labels are day-determined (`JMW2026_DAY_STAGE`); every tracked fruit spoils in (7, 9].
 - 4 folds, leave one tracked fruit out (test = that fruit + ~3 cut fruit; val = 2 cut fruit); 3 seeds.
-  `outputs/splits/a2sl_view_fold{k}.json`. Metrics pool the 4 folds' test forecasts per seed, then mean ± sd over
+  `configs/splits/a2sl_view_fold{k}.json`. Metrics pool the 4 folds' test forecasts per seed, then mean ± sd over
   seeds; significance = paired bootstrap over fruit of the censored log score.
 - Microwave input: `scan_summary` (12 numbers per view: 4 moments + 8 radial bins); one view = those 12 + zeros,
   a pooled set = mean + sd over its views, `concat` = the six side by side (72).
@@ -25,7 +26,7 @@ Requested by Prof. Ming (2026-11-07): a time-series model per microwave view, th
 | 1 | as presented: labels are inputs | `outputs/a2sl_views/seed*`, `summary.md` | no sensor matters: the label history gives the answer; FPT forecasts identical to 1e-4 across views |
 | 2 | labels hidden (targets only; guided posterior off) | `labels_hidden/` | latent SDE differs by view by about seed noise; FPT ignores the features |
 | 2b | AML, teacher = photo + six pooled | `outputs/a2sl_aml/` | no student beats photo-only; 7/14 jobs died of CPU XLA mapped memory -> one process per seed x fold |
-| 2c | recalibration: pure KM map -> 0.9 KM + 0.1 raw | `scratch/recal_diag.py` | mean log score better and the per-run blowups (up to 1.8 nats) gone, both studies |
+| 2c | recalibration: pure KM map -> 0.9 KM + 0.1 raw | `../scratch/recal_diag.py` (outside the repo) | mean log score better and the per-run blowups (up to 1.8 nats) gone, both studies |
 | 3 | microwave numbers z-scored (`data.scan_standardize=true`) | `labels_hidden_std/`, `outputs/a2sl_aml_std/` | raw scans had mean ~2 / sd 0.5-5 vs photo ~0.3 and zero-filled missing scans; standardised, microwave-only beats the control at most views |
 | 4 | pooled triples 0+120+240 / 60+180+300; AML teacher = photo + 0+120+240 | same roots | best combination; AML still no gain |
 
@@ -53,7 +54,7 @@ bootstrap interval, * = excludes 0.
 | photo + microwave six side by side | 1.08 | 0.75 | -0.01 | +0.01 | 0.73 |
 
 **View groups.** Mean log score of the 0/120/240 views minus the 60/180/300 views, per fruit, paired bootstrap
-(`scratch/evenodd.py`): negative in 16/16 cells and significant in 14/16 (rounds 2 and 3 x raw/recal x mw/photo_mw x
+(`../scratch/evenodd.py`, outside the repo): negative in 16/16 cells and significant in 14/16 (rounds 2 and 3 x raw/recal x mw/photo_mw x
 tracked/all), from -0.08 to -0.32. The one-scan snapshot probe (ridge from one scan to study day) does not show the
 split (summary numbers: 0° 2.66 d vs 60° 2.43 d; pixels: 300° best), so the gap appears in tracking change over
 visits, not in reading a single scan. A geometric cause (e.g. three antennas 120° apart, or interpolated

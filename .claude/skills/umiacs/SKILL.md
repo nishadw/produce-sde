@@ -26,7 +26,7 @@ Source: https://wiki.umiacs.umd.edu/umiacs/index.php/ClassAccounts
 Check live values with `show_qos`, `show_partition_qos`, `show_nodes -p class` (RTX A4000 / A5000 nodes).
 
 ## Layout on this cluster
-- Repo: `/fs/class-projects/fall2026/cmsc498z/nwajge/ripen` (remote `git@github.com:nishadw/produce-sde.git`)
+- Repo: `/fs/class-projects/fall2026/cmsc498z/nwajge/produce-sde` (remote `git@github.com:nishadw/produce-sde.git`)
 - `.ripen.env` (gitignored, sourced by `run_umiacs.sh`): `RIPEN_ENV` venv at `.../nwajge/envs/ripen`,
   `RIPEN_PYTHON` = uv-managed Python 3.11 (system python is 3.9, too old), pip/uv/torch caches under `.../nwajge/.cache`.
 - `uv` is at `~/.local/bin/uv` with `UV_PYTHON_INSTALL_DIR=.../nwajge/.local/python`.
@@ -35,11 +35,11 @@ Check live values with `show_qos`, `show_partition_qos`, `show_nodes -p class` (
 
 ## Running
 ```bash
-cd /fs/class-projects/fall2026/cmsc498z/nwajge/ripen
+cd /fs/class-projects/fall2026/cmsc498z/nwajge/produce-sde
 bash run_umiacs.sh pipeline          # setup -> data -> every experiment -> summary, chained with afterok
 bash run_umiacs.sh setup             # one sbatch job: venv, install, CPU tests, smoke
 bash run_umiacs.sh data              # one sbatch job: avocado download (resumable) + loader check, splits, features
-bash run_umiacs.sh e1                # one experiment stage (e1..e6, synthetic, summary); needs setup+data done
+bash run_umiacs.sh e1                # one experiment stage (e1-e4, e6, synthetic, summary); needs setup+data done
 RIPEN_AFTER=<jobid> bash run_umiacs.sh all   # make every submitted job wait on <jobid>
 ```
 Every job logs to `outputs/logs/ripen-<name>-<jobid>.out`. One-off commands:

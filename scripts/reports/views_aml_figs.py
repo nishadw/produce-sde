@@ -1,7 +1,7 @@
 """Charts + numbers for the plain-language views / time-series / AML report, avocados and mangoes (ripen env).
 
 Reads outputs/a2sl_views/labels_hidden_std, outputs/a2sl_aml_std, outputs/mango_views(_recal). Writes
-va_*.png and views_aml_numbers.json next to this file; views_aml_report.py (report env) builds the docx from them.
+va_*.png and views_aml_numbers.json to outputs/report_figures; views_aml_report.py (report env) builds the docx from them.
 """
 
 import json

@@ -11,7 +11,7 @@ Layout of the raw data (Spring 2026, one batch of mangoes bought together, store
   72x72 image reconstruction (``.xlsx``, NaN outside the imaged disk). ``air_{date}`` is the empty-scanner scan of
   that day.
 
-Outputs (``data/manifests/mango_*.csv`` are committed; the ``.npz`` is not):
+Outputs (none committed: data/ is git-ignored; rerun this script to regenerate them):
 
     data/manifests/mango_fruit.csv     one row per labelled fruit: cut day, hue, firmness, sweetness, class, stage 1..5
     data/manifests/mango_scans.csv     one row per (fruit, scan day): scan key

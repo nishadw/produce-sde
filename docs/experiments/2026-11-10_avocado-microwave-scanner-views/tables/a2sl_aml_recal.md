@@ -1,6 +1,6 @@
 # AML on the A2SL avocados: photo-only students taught by a photo + microwave teacher, recalibrated
 
-Root: `results/a2sl_aml`. 4 folds (leave one of avocados 1, 2, 3, 11 out) x seeds; labels are training targets only. Every row except the teacher sees photos only at test time.
+Root: `outputs/a2sl_aml`. 4 folds (leave one of avocados 1, 2, 3, 11 out) x seeds; labels are training targets only. Every row except the teacher sees photos only at test time.
 
 ## fpt_filter, tracked avocados only (1, 2, 3, 11) (teacher microwave input: all)
 

@@ -14,6 +14,7 @@ Methods (every student sees photos only at test time; objectives in ``ripen.trai
     photo_valall  photo, early-stopped on the all-visits validation loss the reset schedule uses
     rounds_only   the reset schedule's rounds and early stopping, without the teacher phase
   teacher reset from the student every round, shared predictor (SAMD; the lab's train_ours_partial):
+    reset_only  no distillation term (control: the reset schedule and shared predictor alone)
     samd      + feature MSE
     ours      + forecast KD, gamma 0.1 alpha 0.9 t 4 (the lab's run_our_steering_distill*.sh)
     ours_rkd / ours_pkt / ours_sp

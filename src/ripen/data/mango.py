@@ -23,6 +23,7 @@ photo-only model (the condition SAMD needs, Shen et al., ICML 2023):
 * ``rgb``  — the cut-day instance only (the photo exists then), features ``[rgb]``; its target is spoiled-now or not.
 * ``mw``   — every scan day, features ``[mw]`` (current scan and its change since day 0).
 * ``both`` — every scan day, ``[rgb | photo-present flag | mw]`` with the photo only on the cut day.
+* ``time`` — no features (with ``history``: elapsed time only, the age control).
 
 Photo features are the mean of the two side photos' ResNet-18 vectors; microwave features are the per-scan vectors of
 the ingest script. Both are reduced by PCA fitted on all fruit **without labels** (unsupervised, so it uses no test

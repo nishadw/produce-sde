@@ -16,9 +16,9 @@ observation is the product of the ``Z_k`` — no variational gap, no Monte Carlo
 visit integrates the survival table against the filtered density. Everything is differentiable, so ``mu``,
 ``sigma``, the clock, the thresholds and the emission network are trained by exact maximum likelihood.
 
-Propagation over an arbitrary physiological duration uses binary decomposition of ``round(s / ds_T)`` over
-precomputed powers ``P^(2^j)`` of the one-step propagator, so a batch of items with different clocks and visit
-gaps costs ``log2(K)`` matrix-vector products per interval.
+Propagation over an arbitrary physiological duration uses binary decomposition of ``floor(s / ds)`` over
+precomputed powers ``P^(2^j)`` of the one-step propagator, then linear interpolation to the next step, so a batch
+of items with different clocks and visit gaps costs ``n_pow + 1`` matrix-vector products per interval.
 """
 
 from __future__ import annotations

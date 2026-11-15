@@ -1,7 +1,7 @@
 # 2026-11-13 · Results brief: latent ODE, latent SDE, AML
 
-Plain-language version: [`results/2026-11-13_results-brief-ode-sde-aml.docx`](../../../results/2026-11-13_results-brief-ode-sde-aml.docx)
-(built by `scripts/reports/brief_figs.py` then `brief_report.py`).
+Plain-language version: `../results/2026-11-13_results-brief-ode-sde-aml.docx`, outside the repo
+(built by `scripts/reports/views_aml_figs.py`, `brief_figs.py`, then `brief_report.py`).
 
 ## What was run
 - **Training-schedule ladder (avocado, 5 seeds × 4 leave-one-tracked-fruit-out folds, CPU).** Starting from a plain

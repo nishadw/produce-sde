@@ -50,7 +50,7 @@ kids.push(new Paragraph({ spacing: { after: 60 }, children: [t("CMSC 838B  ·  S
 kids.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [t("Neural SDEs: Reading and Prep Guide")] }));
 kids.push(P([t("Lecture: ", { color: MUTED }), b("Backprop Through Continuous Time: Neural SDEs: Modeling, Gradients, and Training"), t("   ·   Running example: 'Hass' avocado ripening (Xavier, Rodrigues & Silva, Foods 2024)   ·   Nishad Wajge", { color: MUTED })]));
 kids.push(P([t("Part 1 is the reading list for the class, ready to post with the slides. Part 2 is your prep plan, ordered to match the deck. Part 3 explains every equation on the slides in plain words. Part 4 is the questions you should be able to answer cold. Part 5 covers what's deliberately left out.")]));
-kids.push(P([t("Deck layout: 22 presented slides plus appendix A1–A10 (derivations, solver table, benchmark setup, evaluation protocol, credits), which you don't present but should be able to open if asked. The running example uses the paper's own figures and tables (CC BY 3.0); every number derived from them (rates, Eₐ, first-passage ratios) is worked out in A4 and A5.")]));
+kids.push(P([t("Deck layout: 22 presented slides plus appendix A1–A10 (derivations, solver table, benchmark setup, evaluation protocol, credits), which you don't present but should be able to open if asked. The running example uses the paper's own figures and tables (CC BY 4.0); every number derived from them (rates, Eₐ, first-passage ratios) is worked out in A4 and A5.")]));
 
 // ---- Course requirements
 kids.push(H1("Course requirements for the lecture"));
@@ -233,7 +233,7 @@ kids.push(H1("Part 5. What's not in the talk"));
 kids.push(note("The talk uses only the paper's published data. Nothing on the slides depends on new experiments."));
 kids.push(bullet([b("No results slide: "), t("the evaluation plan moved to appendix A9 (baseline numbers from the paper, how a latent SDE would be scored). Open it only if asked.")]));
 kids.push(bullet([b("If asked whether you ran the model: "), t("say no; this lecture analyzes the paper's data with the neural-SDE lens, and your semester project is where you'll fit it.")]));
-kids.push(bullet([b("Figures: "), t("the paper's figures are CC BY 3.0 and credited on each slide (cropped panels say so). The originals are in your Downloads folder.")]));
+kids.push(bullet([b("Figures: "), t("the paper's figures are CC BY 4.0 and credited on each slide (cropped panels say so). The originals are in your Downloads folder.")]));
 
 // ---------- document ----------
 const doc = new Document({

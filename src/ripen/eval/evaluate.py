@@ -26,7 +26,8 @@ class PredictionSet:
 
 def prediction_instances(items: list[Item], n_obs_list: list[int] | str = "all_unspoiled") -> list[tuple[int, int]]:
     """``(item index, n_obs)`` pairs. ``"all_unspoiled"``: every prefix whose last visit is not yet spoiled.
-    A list of ints: those prefix lengths (clipped to the unspoiled prefixes)."""
+    A list of ints: those prefix lengths, dropping any longer than the unspoiled prefix. An item spoiled at its
+    first visit still gives the one-visit instance."""
     out = []
     for i, it in enumerate(items):
         last = it.n_visits
@@ -59,7 +60,7 @@ def predict_all(
         nobs.append(np.asarray(batch.n_obs))
         tnow.append(np.asarray(batch.t_now))
         snow.append(np.asarray(batch.stage_now))
-    if not Fs:  # no unspoiled prefix in these items (e.g. single-visit items already spoiled)
+    if not Fs:  # no instances (an empty item list, or no requested prefix length fits)
         empty = np.zeros((0,))
         return PredictionSet(
             np.zeros((0, model.horizon + 1)),

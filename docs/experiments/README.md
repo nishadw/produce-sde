@@ -2,7 +2,8 @@
 
 One folder per study, named `<date first run>_<what it tested>`, so they sort chronologically. Each holds the technical
 write-up (`report.md`), the summary tables it cites (`tables/`) and, where used, figures. The plain-language Word
-version of each study is in [`results/`](../../results) under the same name.
+version of each study is built by `scripts/reports/` into `../results` (outside the repo, next to it) under the same
+name.
 
 | Date | Study | What was done | Headline |
 |---|---|---|---|

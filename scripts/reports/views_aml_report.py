@@ -2,7 +2,8 @@
 
 Run views_aml_figs.py first (ripen env; writes the va_*.png charts and views_aml_numbers.json), then this with
 python-docx (report env). Tables are filled from views_aml_numbers.json; prose numbers are read from it too, except
-the recalibration test on mangoes (scratch/mango_recal_diag.py), typed below.
+the recalibration test on mangoes (../scratch/mango_recal_diag.py, outside the repository), typed below. Writes the
+docx to ../results (``_paths.RESULTS``).
 """
 
 import json
@@ -147,7 +148,8 @@ para(
 )
 para(
     "15 avocados followed for two weeks. Four (avocados 1, 2, 3 and 11) were photographed and scanned every "
-    "other day until they spoiled; the other 11 were scanned once. Each scan records six views, 60° apart. Each model "
+    "other day until they spoiled; avocados 4 to 10 were scanned once, on the day they were cut open, and 12 to 15 "
+    "were never scanned. Each scan records six views, 60° apart. Each model "
     "was trained with one followed avocado held out and scored on it, four times over, and every run was repeated 3 "
     "times. The score is how much probability the forecast gave to the day the avocado really spoiled (lower is better).",
     lead="Avocados: ",
@@ -168,8 +170,8 @@ findings = [
     ("Avocado views: ", "with the latent SDE the 0°, 120° and 240° views are again the most useful. With the latent ODE "
      "every view does about equally well, and the differences are small next to run-to-run variation. Training six "
      "separate models and combining their forecasts was no better than merging the views into one model. [Chart 1]"),
-    ("Best avocado model: ", f"the latent ODE beat the latent SDE with every input (photo + 0/120/240°: "
-     f"{a('latent_ode_photo_mw_0+120+240')} vs {a('latent_sde_photo_mw_0+120+240')}). [Table 1]"),
+    ("Best avocado model: ", "the latent ODE beat the latent SDE with every input except the 240° view alone "
+     f"(photo + 0/120/240°: {a('latent_ode_photo_mw_0+120+240')} vs {a('latent_sde_photo_mw_0+120+240')}). [Table 1]"),
     ("Teaching a photo model, avocados: ", "the methods that rebuild the teacher from the student each round "
      f"(SAMD, the lab's method and its variants) beat the photo-only model, by up to a third (latent SDE: "
      f"{a('latent_sde_photo', src=AML)} to {a('latent_sde_' + best_sde, src=AML)}). Methods with a fixed teacher did not "
@@ -179,7 +181,7 @@ findings = [
      f", against {a('latent_sde_photo', src=AML)} and {a('latent_ode_photo', src=AML)} for photo-only), and so does a "
      f"teacher that sees only photos (SAMD: {a('latent_sde_samd_photoT', src=AML)} and "
      f"{a('latent_ode_samd_photoT', src=AML)}). What helps is the way the photo model is trained, not what the scanner "
-     "teaches it. The teacher itself, with the scanner, was never better than the photo-only model. [Table 2]"),
+     "teaches it. The teacher itself, with the scanner, was never clearly better than the photo-only model. [Table 2]"),
     ("Mango views: ", f"every antenna spacing beats the photo alone ({g('latent_sde_rgb')}). Spacings 1, 2, 4 and 5 are "
      f"within 0.01 of each other (best: 5 apart, straight across, with the photo, {g('latent_sde_both_vsep5')}). "
      "Antennas 3 apart are the weakest "
@@ -189,13 +191,13 @@ findings = [
      f"time alone is enough. The latent ODE with time only ({g('latent_ode_time_hist')}) matches the known-age rule "
      f"({g('age_clock')}); adding the scans ({g(f'latent_ode_both_v{P}_hist')}) or photos ({g('latent_ode_rgb_hist')}) "
      "does not help. The latent ODE beats the latent SDE with every input. [Chart 4, Table 3]"),
-    ("Teaching a photo model, mangoes: ", f"no method beat the photo-only model ({g('latent_ode_rgb_hist')}); all "
+    ("Teaching a photo model, mangoes: ", f"no method clearly beat the photo-only model ({g('latent_ode_rgb_hist')}); all "
      f"landed within 0.012 of it, even though the teacher itself does better ({g(f'latent_ode_both_v{P}_hist')}). "
      "[Chart 5]"),
     ("Correction step: ", "the step that makes stated ranges honest improved most avocado scores. After it, the "
      f"take-turns gains hold for the latent SDE (photo-only {a('latent_sde_photo', recal=True, src=AML)}, take-turns "
      f"{a('latent_sde_reset_only', recal=True, src=AML)}) but not for the latent ODE (photo-only "
-     f"{a('latent_ode_photo', recal=True, src=AML)}, best method {a('latent_ode_ours_rkd', recal=True, src=AML)}). On "
+     f"{a('latent_ode_photo', recal=True, src=AML)}, take-turns {a('latent_ode_reset_only', recal=True, src=AML)}). On "
      "mangoes it made every model worse in all six versions we tried, so mango numbers here are uncorrected."),
 ]  # fmt: skip
 for lead, txt in findings:
@@ -303,16 +305,16 @@ for lead, txt in [
     ("RKD, PKT, SP: ", "instead of copying the summary itself, the student copies how the teacher sees fruit relative to "
      "each other: the distances between fruit (RKD), which fruit are near neighbours (PKT), or how similar each pair is "
      "(SP)."),
-    ("SAMD and the lab's method (“reset”): ", "the teacher and student share their last layer and take turns training. "
-     "Every round the teacher is rebuilt from the student, keeps learning with the scan, and hands its last layer back. "
-     "SAMD then matches the summaries; the lab's method matches the forecasts; “reset + RKD/SP” combine the reset "
+    ("SAMD and the lab's method (“reset”): ", "the teacher and student share everything after the "
+     "encoder (the predictor) and take turns training. Every round the teacher is rebuilt from the student, keeps "
+     "learning with the scan, and hands its predictor back. SAMD then matches the summaries; the lab's method matches the forecasts; “reset + RKD/SP” combine the reset "
      "with RKD or SP."),
-    ("Take-turns training (control): ", "the same rounds as SAMD, with the shared last layer, but the student gets no "
+    ("Take-turns training (control): ", "the same rounds as SAMD, with the shared predictor, but the student gets no "
      "teaching term; any gain then comes from the schedule itself. A second control gives the teacher photos only."),
     ("Scanned fruit only: ", "the teacher's terms count only for fruit that actually have scans."),
     ("Six models combined: ", "from the lab's TMC code: train one model per view and combine their forecasts afterwards, "
      "by averaging, by a geometric mean (views must agree), or weighting the more confident views more. Averaging was "
-     "best; the three differed by less than run-to-run variation."),
+     "best on mangoes and the geometric mean on avocados; the three differed by less than run-to-run variation."),
 ]:  # fmt: skip
     para(txt, lead=lead, style="List Bullet", after=2)
 

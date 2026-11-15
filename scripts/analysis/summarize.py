@@ -1,4 +1,4 @@
-"""Collect outputs/runs/*/metrics_test.json into outputs/summary.md (the table the README links to).
+"""Collect outputs/runs/*/metrics_test.json into outputs/summary.md (single-run, per-split tables).
 
 python scripts/analysis/summarize.py
 """

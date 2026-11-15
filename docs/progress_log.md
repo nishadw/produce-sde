@@ -18,13 +18,13 @@ Current state as of 2026-11-05. Running log of what was done and where it stands
     sweep in `outputs/avocado/baselines_sweep/`.
   - Paired bootstrap: `outputs/avocado/significance/summary_recal.md`, `outputs/avocado/significance/summary.md` (pairs in `outputs/avocado/significance/pairs.txt`).
   - Full report: `docs/experiments/2026-10-28_avocado-latent-sde-vs-baselines/report.md`.
-- **For presenting:** `results/2026-10-28_avocado-latent-sde-vs-baselines.docx` (rebuild: `scripts/reports/README.md`).
+- **For presenting:** `../results/2026-10-28_avocado-latent-sde-vs-baselines.docx` (outside the repo; rebuild: `scripts/reports/README.md`).
 - **Tests:** 73 fast tests + smoke (all 14 models) pass. GitHub CI is green (fast job and slow recovery job).
 - **Removed on 2026-11-05:** PBC2, C-MAPSS and DINOv2, plus the old `slurm/` scripts (replaced by `run_umiacs.sh`).
   - Their data and runs are archived in `/fs/class-projects/fall2026/cmsc498z/nwajge/scratch/archive_removed_2026-11-05`.
 
 ## Done (2026-11-12, later): training-schedule ladder + mango score-targeted correction + brief
-- Presentation brief `results/2026-11-13_results-brief-ode-sde-aml.docx` (copy: `../spoilage results brief.docx`), built by
+- Presentation brief `../results/2026-11-13_results-brief-ode-sde-aml.docx` (copy: `../spoilage results brief.docx`), built by
   `scripts/reports/brief_figs.py` then `brief_report.py`.
 - Avocado ladder (`outputs/a2sl_schedule`, 5 seeds x 4 folds, all CPU; controls `photo_valall`, `rounds_only`,
   `reset_only --teacher-photo-only`): the reset gain is the take-turns copy step (latent ODE 0.71 -> 0.45), it improves
@@ -34,8 +34,8 @@ Current state as of 2026-11-05. Running log of what was done and where it stands
   only helps the weak models (`outputs/mango_views_poprecal/maps.md`); mango stays raw.
 
 ## Done (2026-11-12): views x time-series models x lab AML code, avocados + mangoes
-- Plan `docs/experiments/2026-11-12_views-time-series-models-and-aml/experiment_sheet.md`; write-up `docs/experiments/2026-11-12_views-time-series-models-and-aml/report.md`; plain-language `summary.docx` (copy:
-  `../views time series aml results.docx`), built by `scripts/reports/views_aml_figs.py` then `views_aml_report.py`.
+- Plan `docs/experiments/2026-11-12_views-time-series-models-and-aml/experiment_sheet.md`; write-up `docs/experiments/2026-11-12_views-time-series-models-and-aml/report.md`; plain-language report
+  `../results/2026-11-12_views-time-series-models-and-aml.docx`, built by `scripts/reports/views_aml_figs.py` then `views_aml_report.py`.
 - New: `ripen.train.aml` (RepDistiller losses, METHODS incl. lab `ours`, controls), `scripts/analysis/late_fusion.py`,
   mango per-separation views (`scripts/data/ingest_mango_views.py`), mango history mode, `scripts/analysis/mango_*`.
 - Results: latent ODE best model on both fruits; avocado reset-style AML gains are reproduced by the schedule alone
@@ -43,8 +43,8 @@ Current state as of 2026-11-05. Running log of what was done and where it stands
   AML nothing; mango recalibration hurts (reported raw).
 
 ## Done (2026-11-10): A2SL microwave views + AML (asked by Prof. Ming)
-- Write-up `docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md`; plain-language `summary.docx` (copy: `../avocado views results.docx`),
-  built by `scripts/reports/a2sl_views_figs.py` (ripen env) then `a2sl_views_summary.py` (envs/report/bin/python).
+- Write-up `docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md`; plain-language report `../results/2026-11-10_avocado-microwave-scanner-views.docx`,
+  built by `scripts/reports/a2sl_views_figs.py` (ripen env) then `a2sl_views_report.py`.
 - Four rounds: labels as inputs (nothing matters) -> labels hidden -> z-scored microwave numbers + mixed recalibration
   -> pooled view triples. Views 0/120/240 beat 60/180/300 (14/16 significant); best input photo + 0/120/240.
   AML (CAML x2, feature matching, both, SAMD): no student beats photo-only; the teacher itself does not either.

@@ -11,7 +11,8 @@ Inputs are NumPy: ``F[n, h]`` = P(days_left <= h) on the integer grid
 * 80 % interval: quantiles 0.1 and 0.9 by inverting ``F``; coverage on uncensored instances, width on all.
 * C-index: Harrell's, with ``-median`` as the risk score; events at ``hi``, censoring at ``lo``.
 * Reliability: for horizons ``h``, predicted ``F(h)`` vs observed ``1[hi <= h]`` on instances where the outcome
-  by ``h`` is known (uncensored, or censored with ``lo >= h``). Summarised by the expected calibration error.
+  by ``h`` is known (spoiled by then, ``hi <= h``; or still unspoiled then, ``lo >= h``). Summarised by the
+  expected calibration error.
 """
 
 from __future__ import annotations

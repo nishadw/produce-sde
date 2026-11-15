@@ -1,6 +1,6 @@
 # Which microwave view predicts best (A2SL avocados), recalibrated
 
-Root: `results/a2sl_views/labels_hidden_std`.
+Root: `outputs/a2sl_views/labels_hidden_std`.
 Seeds: seed1, seed2, seed3; 4 folds (leave one of avocados 1, 2, 3, 11 out). Lower is better except coverage (about 80 % is ideal) and C-index (higher is better).
 
 ## Time series, latent SDE: tracked avocados only (1, 2, 3, 11)

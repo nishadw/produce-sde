@@ -10,6 +10,7 @@ a mean-temperature Arrhenius law cannot fit all three groups.
 from __future__ import annotations
 
 import equinox as eqx
+import jax
 import jax.numpy as jnp
 from jax import Array
 
@@ -37,7 +38,8 @@ class ArrheniusClock(eqx.Module):
         return self.__call__(jnp.asarray(t_c + 10 + 273.15)) / self.__call__(jnp.asarray(t_c + 273.15))
 
     def __call__(self, temp_k: Array, group: Array | None = None) -> Array:
-        return jnp.exp(self.log_rate_ref) * jnp.exp(-self.ea / R_GAS * (1.0 / temp_k - 1.0 / self.t_ref_k))
+        log_rate_ref = self.log_rate_ref if self.learn_rate_ref else jax.lax.stop_gradient(self.log_rate_ref)
+        return jnp.exp(log_rate_ref) * jnp.exp(-self.ea / R_GAS * (1.0 / temp_k - 1.0 / self.t_ref_k))
 
 
 class GroupClock(eqx.Module):

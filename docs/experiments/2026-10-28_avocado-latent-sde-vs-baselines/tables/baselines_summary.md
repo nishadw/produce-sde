@@ -1,4 +1,4 @@
-# Avocado multi-seed results: `results/avocado/baselines`
+# Avocado multi-seed results: `outputs/avocado/baselines`
 
 Seeds: seed1, seed2, seed3, seed4, seed5. Cells are mean ± sample std over seeds; the split is fixed (same test items for every seed), so the spread is training variance only. Test split, every unspoiled prefix of every test item.
 

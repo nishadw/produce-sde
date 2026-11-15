@@ -1,7 +1,8 @@
 """Charts + numbers for the plain-language A2SL views / AML summary (ripen env).
 
 Reads outputs/a2sl_views/labels_hidden_std (round 3-4: labels hidden, microwave numbers z-scored) and
-outputs/a2sl_aml_std (teacher 0+120+240). Writes a2sl_views.png, a2sl_aml.png and a2sl_numbers.json next to this file.
+outputs/a2sl_aml_std (teacher 0+120+240). Writes a2sl_views.png, a2sl_aml.png and a2sl_numbers.json to
+outputs/report_figures.
 """
 
 import json

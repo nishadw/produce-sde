@@ -2,7 +2,8 @@
 
 Run a2sl_views_figs.py first (ripen env; writes the charts and a2sl_numbers.json), then this with python-docx
 (report env). Table numbers come from a2sl_numbers.json; numbers in the prose are typed from it and from
-outputs/a2sl_views/labels_hidden*/summary*.md and scratch/evenodd.py (view-group test).
+outputs/a2sl_views/labels_hidden*/summary*.md and ../scratch/evenodd.py (view-group test, outside the repository).
+Writes the docx to ../results (``_paths.RESULTS``).
 """
 
 import json
@@ -103,8 +104,9 @@ doc.add_heading("Background", level=1)
 para(
     "Goal: find which of the microwave scanner's six views best predicts how many days an avocado has left, and "
     "whether the scanner can teach a photo-only model. The lab followed 15 avocados for two weeks. Four of them "
-    "(avocados 1, 2, 3 and 11) were photographed and scanned every other day until they spoiled; the other 11 were "
-    "photographed daily and scanned once, on the day they were cut open. Each scan turns the fruit and records six "
+    "(avocados 1, 2, 3 and 11) were photographed and scanned every other day until they spoiled; avocados 4 to 10 "
+    "were photographed at each visit until they were cut open and scanned once, on that day; avocados 12 to 15 have "
+    "photos only. Each scan turns the fruit and records six "
     "views, 60° apart (0°, 60°, 120°, 180°, 240° and 300°)."
 )
 para(
@@ -120,8 +122,8 @@ for lead, txt in [
     (
         "Three of the six views work better: ",
         "the 0°, 120° and 240° views predicted better than the 60°, 180° and 300° views in 14 of 16 comparisons "
-        "(with and without the photo, before and after the correction step, on the four followed avocados and on all "
-        "15). No single view stands out within each group. [Chart 1]",
+        "(raw and standardised scanner numbers, with and without the photo, before and after the correction step, "
+        "on the four followed avocados and on all 15). No single view stands out within each group. [Chart 1]",
     ),
     (
         "Best combination: ",

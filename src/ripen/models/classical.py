@@ -15,7 +15,7 @@ degrading thing cross a threshold", which is what the latent SDE is compared aga
   ``Gamma(delta + alpha L_obs, gamma + X_now - X_first)``. The remaining life is
   ``P(G(u) >= w - X_now) = E_beta[Q(alpha u, beta d)]``.
 * :class:`LandmarkCox`: a discrete-time proportional-hazards model (complementary log-log link; Prentice &
-  Gloeckler 1978) fitted at every landmark ("now") with covariates from the history: current stage, stage slope,
+  Gloeckler 1978) fitted at every landmark ("now") with covariates from the history: highest stage so far, stage slope,
   elapsed days, number of visits and the Arrhenius covariate ``1000/T``. Its interval-censored likelihood is exact
   on the day grid.
 
@@ -102,7 +102,7 @@ class WienerDegradation(eqx.Module):
         self.horizon, self.obs_weight = horizon, float(obs_weight)
 
     def _filter(self, t: Array, y: Array, obs: Array, kappa: Array) -> tuple[Array, Array, Array]:
-        """Kalman filter on ``(X, mu)`` over one item's visits -> (mean at last obs, cov, log-likelihood)."""
+        """Kalman filter on ``(X, mu)`` over one item's visits -> (mean at last obs, cov, time of last obs, log-lik)."""
         sig2, tau2 = jnp.exp(2 * self.log_sigma), jnp.exp(2 * self.log_tau)
         mean0 = jnp.stack([self.x0, self.m])
         cov0 = jnp.diag(jnp.stack([jnp.exp(2 * self.log_p0), jnp.exp(2 * self.log_s)]))
@@ -239,7 +239,7 @@ class LandmarkCox(eqx.Module):
     beta: Array
     horizon: int = eqx.field(static=True)
 
-    N_COV = N_STAGES + 1 + 4  # one-hot current stage (0 = unlabelled), slope, elapsed, n visits, 1000/T
+    N_COV = N_STAGES + 1 + 4  # one-hot highest stage so far (0 = unlabelled), slope, elapsed, n visits, 1000/T
 
     def __init__(self, horizon: int, *, key=None):
         self.base = jnp.full((horizon + 1,), -3.0, jnp.float32)

@@ -1,7 +1,7 @@
 """Encoders from a visible visit history to a context vector.
 
-All three run over the padded visit axis with ``lax.scan`` and respect the
-``visible`` mask, so hidden (future) visits never leak in.
+All of them run over the padded visit axis and respect the ``visible`` mask,
+so hidden (future) visits never leak in.
 
 * ``gru``: GRU on ``[x_k, dt_k]`` — the "GRU with time-gap features" baseline.
 * ``gru_d``: the hidden state decays towards zero with the gap before each
@@ -9,6 +9,8 @@ All three run over the padded visit axis with ``lax.scan`` and respect the
   decay; input decay is unneeded because every visit has all its inputs).
 * ``ode_rnn``: the hidden state follows ``dh/dt = f(h)`` between visits
   (fixed-step RK4) and a GRU update at each visit (Rubanova et al. 2019).
+* ``cde``: neural CDE driven by the piecewise-linear path of ``[x_k, t_k]`` (Kidger et al. 2020).
+* ``transformer``: pre-LN transformer over the visible visits; the last visible token is the context.
 """
 
 from __future__ import annotations

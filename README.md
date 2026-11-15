@@ -27,12 +27,14 @@ The PDE solver matches the inverse-Gaussian first-passage law to 1e-3; parameter
 
 ## Results
 
-Each study has a plain-language Word report in [`results/`](results) and a technical write-up with every table in
-[`docs/experiments/`](docs/experiments). File names start with the date the study was first run.
+Each study has a technical write-up with every table in [`docs/experiments/`](docs/experiments) and a plain-language
+Word report, built by `scripts/reports/` into `../results` (a `results/` folder next to the repo, outside git). File
+names start with the date the study was first run. MAE = mean absolute error in days; CRPS = continuous ranked
+probability score (lower is better for both).
 
 | Date | Study | Headline |
 |---|---|---|
-| 2026-10-28 | [Avocado: latent SDE vs 12 baselines](docs/experiments/2026-10-28_avocado-latent-sde-vs-baselines/report.md) (public set, 478 fruit, 5 seeds) | At an unseen storage temperature the Arrhenius clock cuts MAE 1.5–2.4× vs ablated clocks; with a photo only every 3rd day the latent SDE has CRPS 0.97 vs 1.5–2.7 for every other model; 80 % intervals cover 94 % (SDE) vs 64 % (latent ODE). A small transformer is best in-distribution. |
+| 2026-10-28 | [Avocado: latent SDE vs 12 baselines](docs/experiments/2026-10-28_avocado-latent-sde-vs-baselines/report.md) (public set, 478 fruit, 5 seeds) | At an unseen storage temperature the Arrhenius clock cuts MAE 1.5–2.4× vs ablated clocks; with a photo only every 3rd day the latent SDE has CRPS 0.97 vs 1.08 for the latent ODE and 1.5–2.7 for every other model; 80 % intervals cover 94 % (SDE) vs 64 % (latent ODE). A small transformer is best in-distribution. |
 | 2026-11-06 | [Mango: photo vs microwave](docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md) (48 lab fruit) | Microwave scans clearly beat photos; no model beats a known-age reference. |
 | 2026-11-10 | [Avocado: microwave scanner views](docs/experiments/2026-11-10_avocado-microwave-scanner-views/report.md) | The 0°, 120° and 240° rotation views beat 60°, 180° and 300° (14 of 16 paired tests). |
 | 2026-11-12 | [Views × time-series models × AML](docs/experiments/2026-11-12_views-time-series-models-and-aml/report.md) | Latent ODE is the best model on both fruits. Teacher-student gains on avocados come from the training schedule, not the scanner. |
@@ -49,7 +51,8 @@ python scripts/run/train.py model=latent_sde data=synthetic train=smoke
 
 With the public avocado data (`python scripts/data/download_avocado.py`, then `make features`), each experiment is
 one Hydra command, e.g. `python scripts/run/train.py model=latent_sde data=avocado +experiment=logo splits.held_out=T10`.
-The full pipeline runs as SLURM jobs: `bash run_umiacs.sh pipeline` (`--local` to run without SLURM).
+The full pipeline runs as SLURM jobs: `bash run_umiacs.sh pipeline` (`bash run_umiacs.sh all --local` to run
+without SLURM).
 
 ## Repository layout
 
@@ -65,9 +68,8 @@ scripts/
   data/               download, ingest, feature extraction, split files
   run/                train, evaluate, smoke test, study drivers (mango CV, scanner views, AML)
   analysis/           summaries, recalibration, paired bootstrap, late fusion
-  reports/            build the Word reports in results/ and their charts
+  reports/            build the Word reports (into ../results, outside the repo) and their charts
 tests/              pytest suite (CPU)
-results/            the Word reports, one per study, dated
 docs/
   experiments/        technical write-up + tables per study, dated
   background/         theory, literature review, dataset survey, proposal
@@ -94,7 +96,8 @@ See [`data/README.md`](data/README.md) for the expected layout and the ingest co
 - On the UMIACS cluster, compute goes through `sbatch` / `srun`, never the login node; see
   [`.claude/skills/umiacs/SKILL.md`](.claude/skills/umiacs/SKILL.md) and `run_umiacs.sh`.
 - New study: run outputs go to `outputs/<study>/`; add `docs/experiments/<YYYY-MM-DD>_<what-it-tests>/` with a
-  `report.md` and the tables it cites, and put its Word report in `results/` under the same name.
+  `report.md` and the tables it cites; Word reports are built by `scripts/reports/` into `../results`, outside the
+  repo, under the same name.
 
 ## SDE foundations (side project)
 

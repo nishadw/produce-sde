@@ -268,7 +268,7 @@ error 1.5–2.4× against the better ablation, and 1.5–3.1× against the per-g
 | every 3rd day | **0.97** | 1.89 | 1.52 | 1.98 | 1.76 | 2.12 | 2.73 |
 
 *(CRPS, mean over 5 seeds; GRU-D from Round 1. MAE every 3rd day: latent SDE 1.38 vs 2.06–3.00 for the rest.)* With a photo every 3rd
-day the latent SDE's CRPS is close to its daily score, while every other model's roughly doubles. The paired
+day the latent SDE's CRPS is close to its daily score, while every other model's rises (Wiener +15 %, the rest 1.4–2.6×). The paired
 bootstrap below confirms it beats the transformer, Wiener and GRU-D at both sparse rates (all 12 intervals exclude 0).
 
 **E2 again: with guidance, the exact likelihood catches up with Monte Carlo.**
@@ -392,7 +392,6 @@ repeated. The rate-bias work on 3 November found three more (8–10).
 | 8 | **Synthetic rates 8–32 % too fast**; slow recovery test failed in CI (CDF error 0.325 > 0.3) | the ELBO's variational gap shrinks as the clock speeds up (path-steering cost ∝ 1/κ), so its optimum sits at a fast clock; the exact likelihood peaks at the truth | guided posterior (closed-form pull toward the next label) + predictive event term (E0) |
 | 9 | Arrhenius test: $E_a$ 21 % low | under-training: $\log E_a$ starts at log 30k and moves ≤ 0.02 per step; 56 steps could not reach 50k | test trains 30 epochs |
 | 10 | (whole-sequence scoring only) the spoiled label was scored as "past the boundary now" and its crossing counted twice | "spoiled" means *crossed by* that visit; a diffusion can cross and come back | the spoiled label is scored by the event term only, as the bridge crossing probability |
-
 | 11 | CPU jobs died with `LLVM compilation error: Cannot allocate memory` after 150–270 epochs, at only ~4 GB RSS | `evaluate_loss` wrapped a fresh `eqx.filter_jit(lambda …)` on every call, so validation recompiled every epoch and leaked compiled code | one module-level jitted `_eval_loss_step`; numerically identical |
 
 Fixes 6–7 also changed the latent ODE on avocado slightly; all latent-ODE numbers in this report are from the fixed
@@ -412,7 +411,7 @@ model. Fix 5 changes nothing wherever the old computation was finite.
    a simple per-fruit trend extrapolation already does this; a hybrid that falls back on it off-range is the obvious
    thing to try. A ~2-nat gap also remains because the guidance looks one label ahead; the exact
    fix is the full h-transform from a backward filter on the PDE grid.
-3. **Seeds.** Avocado (E1–E4) has 5 independent seeds. Synthetic and A2SL are still single runs. The split is
+3. **Seeds.** Avocado (E1–E4) has 5 independent seeds. Synthetic is still a single run; A2SL has 5 seeds since Round 2b. The split is
    fixed across seeds, so the error bars don't include split variance.
 4. **Over-wide intervals in-distribution.** Partly an artifact: the metric takes quantiles on whole days, so a
    perfect forecaster scores 0.85–0.88, not 0.80. Post-hoc recalibration brings every distributional model to

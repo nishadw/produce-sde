@@ -1,4 +1,4 @@
-"""A2SL loaders: a tiny synthetic manifest (so CI needs no raw data), plus the committed manifests when present."""
+"""A2SL loaders: a tiny synthetic manifest (so CI needs no raw data), plus the ingested data/manifests/ when present."""
 
 from pathlib import Path
 
@@ -176,7 +176,7 @@ def test_loaders_on_fake_manifests(tmp_path):
 
 
 @pytest.mark.skipif(not Path("data/manifests/a2sl_avocado_visits.csv").exists(), reason="A2SL manifests not present")
-def test_committed_manifests_parse():
+def test_ingested_manifests_parse():
     items = load_a2sl_avocado()
     assert len(items) == 15
     assert sum(it.meta["tracked_to_end"] for it in items) == 4

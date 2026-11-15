@@ -2,7 +2,7 @@
 
 Reads views_aml_numbers.json (views_aml_figs.py: latent ODE / SDE by input, mango) and outputs/a2sl_schedule
 (5 seeds x 4 folds: photo-only students taught by a photo + scanner teacher). Writes br_*.png and brief_numbers.json
-next to this file; brief_report.py (report env) builds results/2026-11-13_results-brief-ode-sde-aml.docx.
+to outputs/report_figures; brief_report.py (report env) builds ../results/2026-11-13_results-brief-ode-sde-aml.docx.
 """
 
 import json

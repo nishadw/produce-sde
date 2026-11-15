@@ -1,6 +1,6 @@
 // Neural SDEs lecture (CMSC 838B) — v4: 25-minute slot, light theme, running example from Xavier et al. (Foods 2024).
 // Build:  python figs.py && node build_deck.js   (optional: APPLY_THEME=/path/to/apply_theme.js)
-// Paper figures (img/p_*.jpg) are from Xavier, Rodrigues & Silva, Foods 13(8):1150 (2024), CC BY 3.0.
+// Paper figures (img/p_*.jpg) are from Xavier, Rodrigues & Silva, Foods 13(8):1150 (2024), CC BY 4.0.
 const pptxgen = require("pptxgenjs");
 let applyTheme = async () => {};
 try { ({ applyTheme } = require(process.env.APPLY_THEME || "./apply_theme.js")); } catch (e) { console.warn("apply_theme.js not found; skipping theme colours"); }
@@ -127,7 +127,7 @@ pres.addSection({ title: "Opening" });
     ["14,722 (2 sides × daily)", "5-stage index; 10-stage refinement", "70/15/15 by fruit"],
   ], 0.5, 3.15, [1.65, 2.25, 1.15], { fontSize: 10.5, rowH: 0.34 });
   img(s, "p_fig2_index.jpg", 5.5, 1.4, { w: 4.0 });
-  credit(s, "Fig. 2 (cropped): 5- vs. 10-stage index; end of shelf life = entry to stage 5. " + CREDIT + ", CC BY 3.0.", 5.5, 2.83, 4.0);
+  credit(s, "Fig. 2 (cropped): 5- vs. 10-stage index; end of shelf life = entry to stage 5. " + CREDIT + ", CC BY 4.0.", 5.5, 2.83, 4.0);
   txt(s, [M("Shelf life:  "), B("τ = first day at stage 5")], 5.5, 3.25, 4.0, 0.3, { fontSize: 13 });
   credit(s, "Stage-1→5 durations computed from the paper's Table 4 slopes (4 × |α|).", 0.5, 4.45, 6);
   notes(s, [
@@ -139,7 +139,7 @@ pres.addSection({ title: "Opening" });
     "• Splits are by fruit, so no avocado appears in both train and test.",
     "",
     "IF ASKED — why is the 10-stage index there? Finer resolution; the paper reports it's less accurate exactly (≈60%) but ≈93% within one stage.",
-    "IF ASKED — license? The paper is CC BY 3.0; figures are reused with attribution. The dataset is on Mendeley Data (doi:10.17632/3xd9n945v8).",
+    "IF ASKED — license? The paper is CC BY 4.0; figures are reused with attribution. The dataset is on Mendeley Data (doi:10.17632/3xd9n945v8).",
   ]);
 }
 
@@ -183,7 +183,7 @@ pres.addSection({ title: "Opening" });
 {
   const s = content("Opening", "RUNNING EXAMPLE", "Their Shelf-Life Model, Read as a Constant-Drift ODE", "Regression line = drift; error bars = the spread it leaves out.");
   img(s, "p_fig6a_T10.jpg", 0.5, 1.3, { w: 4.7 });
-  credit(s, "Fig. 6a (T10, cropped from Fig. 6): mean ± sd days left per stage. " + CREDIT + ", CC BY 3.0.", 0.5, 4.27, 4.7);
+  credit(s, "Fig. 6a (T10, cropped from Fig. 6): mean ± sd days left per stage. " + CREDIT + ", CC BY 4.0.", 0.5, 4.27, 4.7);
   img(s, "v3_drift.png", 5.45, 1.42, { w: 4.05 });
   table(s, [
     ["Group", "α (d / stage)", "v = 1/|α|", "R²"],
@@ -208,7 +208,7 @@ pres.addSection({ title: "Opening" });
 {
   const s = content("Opening", "RUNNING EXAMPLE", "A Point Estimate Hides Days of Spread", "Quantization explains most error; the excess peaks at 10 °C, the longest horizon.");
   img(s, "p_fig11_T10_kde.jpg", 0.5, 1.3, { w: 5.2 });
-  credit(s, "Fig. 11 (T10, cropped): shelf-life error vs. ripening index; left attributed labels, right predicted. " + CREDIT + ", CC BY 3.0.", 0.5, 3.75, 5.2);
+  credit(s, "Fig. 11 (T10, cropped): shelf-life error vs. ripening index; left attributed labels, right predicted. " + CREDIT + ", CC BY 4.0.", 0.5, 3.75, 5.2);
   table(s, [
     ["Group", "|α| (d)", "floor |α|/4", "MAE", "share"],
     ["T10", "4.39", "1.10", R("1.70"), R("65%")],
@@ -752,7 +752,7 @@ const appx = (code, title, takeaway) => content("Appendix", "APPENDIX  ·  " + c
 { // A10
   const s = appx("A10", "References and Figure Credits", null);
   const L = [
-    "Xavier, Rodrigues & Silva. Shelf-life management and ripening assessment of 'Hass' avocado using deep learning. Foods 13(8):1150, 2024. doi:10.3390/foods13081150. CC BY 3.0 (Figs. 1, 2, 6a, 11; Tables 3, 4, 6).",
+    "Xavier, Rodrigues & Silva. Shelf-life management and ripening assessment of 'Hass' avocado using deep learning. Foods 13(8):1150, 2024. doi:10.3390/foods13081150. CC BY 4.0 (Figs. 1, 2, 6a, 11; Tables 3, 4, 6).",
     "'Hass' Avocado Ripening Photographic Dataset. Mendeley Data, 2024. doi:10.17632/3xd9n945v8.",
     "Chen et al. Neural ODEs. NeurIPS 2018.",
     "Li, Wong, Chen, Duvenaud. Scalable Gradients for SDEs. AISTATS 2020.",

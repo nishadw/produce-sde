@@ -1,9 +1,12 @@
 # Scanner views, time-series models and AML: A2SL avocados and mangoes
 
-Plan: `docs/plans/views_aml_plan.md` (experiment IDs AV*/MG*/A*). Plain-language summary: `summary.docx`, built by
-`scripts/reports/views_aml_figs.py` (ripen env) then `views_aml_report.py` (`envs/report/bin/python`).
+Plan: [`experiment_sheet.md`](experiment_sheet.md) (experiment IDs AV*/MG*/A*). Plain-language summary:
+`../results/2026-11-12_views-time-series-models-and-aml.docx`, outside the repo, built by
+`scripts/reports/views_aml_figs.py` (ripen env) then `views_aml_report.py` (needs only python-docx, e.g.
+`../envs/report/bin/python`).
 Tables: `outputs/a2sl_views/labels_hidden_std/summary*.md`, `outputs/a2sl_aml_std/summary*.md`,
-`outputs/mango_views/summary.md` (`_recal` for the recalibrated copy).
+`outputs/mango_views/summary.md` (`_recal` for the recalibrated copy). Copies in the repo: mango in
+[`tables/`](tables), avocado in [the 2026-11-10 study's `tables/`](../2026-11-10_avocado-microwave-scanner-views/tables).
 
 ## Setup
 - **Avocado (A2SL):** labels hidden as inputs, microwave numbers z-scored, 4 leave-one-tracked-avocado-out folds × 3
@@ -57,7 +60,7 @@ late fusion mean 0.161 / trust 0.162 / geo 0.165 (both). Nothing comes near the 
 **Mango AML (MG4).** Latent ODE, history, teacher both + pooled sep1–5 (0.082). Every student within 0.012 of photo-only
 (0.100); none significant.
 
-**Recalibration, mango (MG5).** Hurts every run (age_clock 0.077 → 0.122). `scratch/mango_recal_diag.py` tried fit on
+**Recalibration, mango (MG5).** Hurts every run (age_clock 0.077 → 0.122). `../scratch/mango_recal_diag.py` (outside the repo) tried fit on
 all / earlier-scan / cut-day instances × weight 0.9 / 0.5: all worse than raw except photo-only at weight 0.5. The PIT
 map is fit on each fruit's own (mostly interval-censored) outcome, while the population Brier scores the CDF against
 fold-mates' outcomes; the raw forecasts are already calibrated for that target. Mango numbers are reported raw.
@@ -87,6 +90,6 @@ leave-one-fold-out. Only weak runs improve (one-scan photo 0.246 → 0.206); goo
 - CPU XLA "Failed to materialize symbols" after several seeds in one process → `mango_cv.py` runs one process per seed.
 - One GPU job (ours_rkd β 1 lr 3e-3) hung for 8 h before its first log line on tron10; the resubmission ran normally.
 
-**Scope (2026-11-13).** Neural CDE and GRU-D are dropped from the plain-language docs (summary.docx, brief.docx): with
+**Scope (2026-11-13).** Neural CDE and GRU-D are dropped from the plain-language docs (the 2026-11-12 and 2026-11-13 Word reports): with
 3 training avocados per fold their best checkpoint was the untrained one, so they are not being pursued. Their runs
 stay in `outputs/` and the tables above.

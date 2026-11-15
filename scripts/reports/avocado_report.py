@@ -1,4 +1,9 @@
-"""Plain-language one-page results summary (avocado only). Run from the scratch brief folder with python-docx."""
+"""Plain-language one-page results summary (avocado only).
+
+Run avocado_fig_transfer.py, avocado_fig_compare.py and avocado_fig_heldout.py first (ripen env), then this with
+python-docx (report env). Prose and table numbers are typed from the 2026-10-28 study's tables (round2_summary*.md,
+baselines_summary*.md). Writes the docx to ../results (``_paths.RESULTS``).
+"""
 
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor

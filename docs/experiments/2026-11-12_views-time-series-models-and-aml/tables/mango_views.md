@@ -1,4 +1,4 @@
-# Mango: views, time series and AML (`results/mango_views`)
+# Mango: views, time series and AML (`outputs/mango_views`)
 
 Cells: mean ± std over seeds; 6 folds by fruit; scored on the cut day without stage labels. Bootstrap: first minus reference, 95 % interval, `*` = excludes 0 (negative = better).
 

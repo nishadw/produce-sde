@@ -141,9 +141,10 @@ negative = first is better)
 
 Other columns of `summary.md`:
 - **Firmness rank correlation** (expected days left vs firmness): 0.61–0.76 for the neural models with microwave
-  input, 0.0–0.27 with photo only.
-- **Within-day rank correlation**: between −0.37 and +0.14 everywhere, so none of them is clearly positive.
-- **Mean predicted spoilage day**: 14.2–15.2 with microwave input, 15–20 with photo only (true: 10–14).
+  input (except latent ODE photo + microwave, 0.39, and the FPT filter, ≤ 0.05), 0.0–0.27 with photo only.
+- **Within-day rank correlation**: between −0.37 and +0.08 everywhere, so none of them is clearly positive.
+- **Mean predicted spoilage day**: 13.6–16.0 with microwave input, 15–20 with photo only (FPT filter 12.0) (true:
+  10–14).
 
 ## 4. What this means
 
@@ -155,7 +156,7 @@ Other columns of `summary.md`:
 - **Age is almost everything here.** Knowing the fruit's age alone gives population Brier 0.077, far better than any
   sensor model. Within a day, no model or sensor ranks fruit by firmness better than chance. With 6 fruit per day and
   ripening this synchronised, per-fruit differences are small next to measurement noise.
-- **The neural models forecast too late.** They put the average spoilage day at 14–16. The batch spoiled between days
+- **The neural models forecast too late.** They put the average spoilage day at 14–16 (up to 20 for the photo-only latent models). The batch spoiled between days
   10 and 14, and the references put it at 12.5–13.8. With 32 training fruit, a censored likelihood that rarely sees
   a spoiled fruit pushes mass late.
 
