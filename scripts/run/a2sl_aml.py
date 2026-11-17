@@ -44,6 +44,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "run"))
 from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, N_FOLDS, fold_path, scan_view_arg, write_folds  # noqa: E402
 
+from ripen.data.schema import all_starts  # noqa: E402
 from ripen.models import build_model  # noqa: E402
 from ripen.pipeline import dataset_info, evaluate_and_write, load_items, model_cfg_dict, select  # noqa: E402
 from ripen.train import TrainConfig, train  # noqa: E402
@@ -116,6 +117,11 @@ def main() -> None:
     ap.add_argument("--rounds", type=int, default=12)
     ap.add_argument("--k", type=int, default=5)
     ap.add_argument("--tag", default="", help="suffix for the run name (hyperparameter variants)")
+    ap.add_argument(
+        "--eval-all-starts",
+        action="store_true",
+        help="also score each test fruit from every later start (<id>@k, ripen.data.schema.all_starts)",
+    )
     ap.add_argument("--out", default="outputs/a2sl_aml")
     ap.add_argument("extra", nargs="*", help="extra Hydra overrides (smoke tests)")
     a = ap.parse_args()
@@ -195,6 +201,8 @@ def main() -> None:
                     model, _ = train_distill(student, teacher, tr_s, va_s, t_by_id, info_s, info_t, tcfg, k_st,
                                              spec=spec, has_aux=has_aux)  # fmt: skip
                 info, te, va = info_s, te_s, va_s
+            if a.eval_all_starts:
+                te = all_starts(te, float(tcfg.random_start_max))
             (out / "info.json").write_text(json.dumps(info.to_dict(), indent=2))
             k1, k2 = jax.random.split(k_ev)
             evaluate_and_write(model, va, info, cfg, out, k2, tag="val")
