@@ -1,4 +1,4 @@
-"""Sequence model: history encoder (GRU / GRU-D / ODE-RNN / neural CDE / transformer) -> discrete survival head.
+"""Sequence model: history encoder (transformer; GRU also available) -> discrete survival head.
 
 Trained with the interval-censored likelihood on one prediction instance per
 item. With ``n_obs_mode: random`` in the trainer the visible prefix is
@@ -31,7 +31,7 @@ class SequenceSurvival(eqx.Module):
         feat_dim: int,
         n_groups: int,
         horizon: int,
-        encoder: str = "gru",
+        encoder: str = "transformer",
         hidden: int = 64,
         visit_dim: int = 32,
         group_dim: int = 4,

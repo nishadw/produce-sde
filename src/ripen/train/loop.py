@@ -85,9 +85,6 @@ def train(
         model = eqx.apply_updates(model, updates)
         return model, opt_state, loss
 
-    if hasattr(model, "fit_closed_form"):
-        model = model.fit_closed_form(collate(train_items, info, n_obs="all"))
-
     history: list[dict] = []
     best, best_val, bad, n_steps = model, float("inf"), 0, 0
     t0 = time.time()
@@ -103,8 +100,6 @@ def train(
             n_steps += 1
             if cfg.max_steps is not None and n_steps >= cfg.max_steps:
                 break
-        if hasattr(model, "fit_closed_form"):
-            model = model.fit_closed_form(collate(train_items, info, n_obs="all"))
         key, sub = jax.random.split(key)
         vmode = cfg.val_n_obs_mode or cfg.n_obs_mode
         val = evaluate_loss(model, val_items, info, cfg.batch_size, sub, vmode) if val_items else float("nan")

@@ -7,9 +7,6 @@ import dataclasses
 import jax
 
 from ..data.collate import DatasetInfo
-from .baselines import DirectRegressor, DiscreteSurvival, StageLinearRule
-from .classical import GammaDegradation, LandmarkCox, WienerDegradation
-from .fpt_filter import FirstPassageFilter
 from .latent import LatentDynamics
 from .sequence import SequenceSurvival
 
@@ -27,7 +24,7 @@ def _seq(encoder):
             use_images=cfg.get("use_images", True),
             use_stages=cfg.get("use_stages", False),
             key=key,
-            **{k: cfg[k] for k in ("substeps", "d_model", "heads", "layers") if k in cfg},
+            **{k: cfg[k] for k in ("d_model", "heads", "layers") if k in cfg},
         )
 
     return make
@@ -44,52 +41,7 @@ def _latent(kind):
 
 
 MODEL_REGISTRY = {
-    "stage_linear": lambda cfg, info, key: StageLinearRule(
-        info.feat_dim, len(info.groups), cfg["horizon"], cfg.get("width", 64), cfg.get("depth", 2), key=key
-    ),
-    "direct_reg": lambda cfg, info, key: DirectRegressor(
-        info.feat_dim,
-        len(info.groups),
-        cfg["horizon"],
-        cfg.get("width", 64),
-        cfg.get("depth", 2),
-        cfg.get("group_dim", 4),
-        cfg.get("huber_delta", 2.0),
-        key=key,
-    ),
-    "discrete_surv": lambda cfg, info, key: DiscreteSurvival(
-        info.feat_dim,
-        len(info.groups),
-        cfg["horizon"],
-        cfg.get("width", 64),
-        cfg.get("depth", 2),
-        cfg.get("group_dim", 4),
-        key=key,
-    ),
-    "gru_gap": _seq("gru"),
-    "gru_d": _seq("gru_d"),
-    "ode_rnn": _seq("ode_rnn"),
-    "neural_cde": _seq("cde"),
     "transformer": _seq("transformer"),
-    "wiener": lambda cfg, info, key: WienerDegradation(
-        len(info.groups),
-        cfg["horizon"],
-        cfg.get("clock", "arrhenius"),
-        cfg.get("clock_kwargs"),
-        cfg.get("obs_weight", 1.0),
-        key=key,
-    ),
-    "gamma_process": lambda cfg, info, key: GammaDegradation(
-        len(info.groups), cfg["horizon"], cfg.get("clock", "arrhenius"), cfg.get("clock_kwargs"), key=key
-    ),
-    "landmark_cox": lambda cfg, info, key: LandmarkCox(cfg["horizon"], key=key),
-    "fpt_filter": lambda cfg, info, key: FirstPassageFilter(
-        info.feat_dim,
-        len(info.groups),
-        cfg["horizon"],
-        key=key,
-        **{k: v for k, v in cfg.items() if k not in ("name", "horizon", "seed")},
-    ),
     "latent_ode": _latent("ode"),
     "latent_sde": _latent("sde"),
 }

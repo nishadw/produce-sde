@@ -16,7 +16,7 @@ early-stopped on its validation loss across rounds, computed with every visit vi
 phase always trains on random visible prefixes.
 
 Every model in ``ripen.models`` with a ``visit_enc`` qualifies; its features are what the predictor reads:
-``context`` (sequence models), the posterior context (latent SDE/ODE) or the visit embedding (FPT filter).
+``context`` (the transformer) or the posterior context (latent SDE/ODE).
 """
 
 from __future__ import annotations
@@ -43,10 +43,6 @@ def features(model, batch) -> jax.Array:
         return model.context(batch)
     if hasattr(model, "encode"):
         return model.encode(batch)[0]
-    if hasattr(model, "visit_enc"):  # FPT filter: embedding of the last visible visit
-        idx = batch.n_obs - 1
-        f = batch.feat[jnp.arange(batch.batch_size), idx]
-        return jax.vmap(model.visit_enc)(f, jnp.zeros(batch.batch_size, jnp.int32))
     raise TypeError(f"{type(model).__name__} has no feature network for SAMD")
 
 

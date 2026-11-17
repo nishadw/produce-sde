@@ -19,7 +19,7 @@
 # Experiments (see docs/plans/experiment_plan.md):
 #   synthetic  fake-fruit recovery at full scale                     outputs/synthetic/
 #   e1         every model on the Mendeley avocado set               outputs/runs/<model>_avocado
-#   e2         exact filter vs PDE-ELBO vs Monte Carlo likelihoods    outputs/runs/{fpt_filter,latent_sde}_*
+#   e2         PDE-ELBO vs Monte Carlo likelihoods                    outputs/runs/latent_sde_*
 #   e3         leave-one-storage-group-out transfer + clock ablation outputs/runs/*_logo_*
 #   e4         sampling-frequency and photo-count ablations          outputs/runs/*_every{2,3}, metrics_by_n_obs.json
 #   e6         A2SL multimodal avocados (photos + microwave)         outputs/runs/<model>_a2sl
@@ -28,10 +28,10 @@
 #   Round 2 (docs/plans/round2_plan.md):
 #   r2         guided-posterior latent SDE (ResNet-18 features), 5 seeds: in-distribution + 3 held-out groups
 #              outputs/avocado/round2/
-#   nb-sweep   new baselines, seed 1, small config sweep (pick by val CRPS) -> outputs/avocado/baselines_sweep/
-#   nb         new baselines x {E1, LOGO x3, every2/3, A2SL}, 5 seeds; NB_ARGS_<model>='...' passes the chosen config
+#   nb-sweep   transformer, seed 1, small config sweep (pick by val CRPS) -> outputs/avocado/baselines_sweep/
+#   nb         transformer x {E1, LOGO x3, every2/3, A2SL}, 5 seeds; NB_ARGS_<model>='...' passes the chosen config
 #   r2b        the rest for the guided model: labels-only, MC likelihood, clock ablation, sparse photos, and
-#              A2SL (guided latent SDE, GRU-D, FPT filter)   outputs/avocado/round2/
+#              A2SL (guided latent SDE)   outputs/avocado/round2/
 #   recal      post-hoc PIT recalibration (val -> test) of every saved run  metrics_test_recal.json in each run
 #   sparse     rerun only the photo-every-2nd/3rd-day runs of e4, seeds, r2b and nb (RIPEN_RUN_FILTER=sampling_every)
 #   Mango (docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md):
@@ -55,7 +55,7 @@ STAGE="${1:-all}"; LOCAL=0; [[ "${2:-}" == "--local" ]] && LOCAL=1
 PY="${RIPEN_ENV}/bin/python"
 read -r -a AFTER <<< "${RIPEN_AFTER:-}"
 declare -A JOBS
-MODELS=(stage_linear direct_reg discrete_surv gru_gap gru_d ode_rnn latent_ode latent_sde fpt_filter)
+MODELS=(latent_ode latent_sde transformer)  # the model set from 2026-11-17 (CAML-KD / SAMD train these)
 mkdir -p outputs/logs outputs/runs
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -112,30 +112,28 @@ stage_e1() {
 stage_e2() {
   JOBS[e2_pde]=$(submit e2-pde "$PY scripts/run/train.py model=latent_sde data=avocado model.event_likelihood=pde run_name=latent_sde_avocado_pde")
   JOBS[e2_mc]=$(submit e2-mc "$PY scripts/run/train.py model=latent_sde data=avocado model.event_likelihood=mc run_name=latent_sde_avocado_mc")
-  JOBS[e2_filter]=$(submit e2-filter "$PY scripts/run/train.py model=fpt_filter data=avocado run_name=fpt_filter_avocado_exact")
-  JOBS[e2_synth_filter]=$(submit e2-synth-filter "$PY scripts/run/train.py model=fpt_filter data=synthetic run_name=fpt_filter_synthetic_exact")
   JOBS[e2_synth_pde]=$(submit e2-synth-pde "$PY scripts/run/train.py model=latent_sde data=synthetic model.event_likelihood=pde run_name=latent_sde_synthetic_pde")
   JOBS[e2_synth_mc]=$(submit e2-synth-mc "$PY scripts/run/train.py model=latent_sde data=synthetic model.event_likelihood=mc run_name=latent_sde_synthetic_mc")
 }
 
 stage_e3() {
   for g in T10 T20 Tamb; do
-    for m in direct_reg gru_d latent_sde fpt_filter; do JOBS[e3_${m}_$g]=$(submit "e3-$m-$g" "$PY scripts/run/train.py model=$m data=avocado +experiment=logo splits.held_out=$g"); done
+    for m in latent_sde transformer; do JOBS[e3_${m}_$g]=$(submit "e3-$m-$g" "$PY scripts/run/train.py model=$m data=avocado +experiment=logo splits.held_out=$g"); done
     for c in group fixed; do JOBS[e3_clock_${c}_$g]=$(submit "e3-clock-$c-$g" "$PY scripts/run/train.py model=latent_sde data=avocado +experiment=logo splits.held_out=$g model.clock=$c run_name=latent_sde_avocado_logo_${g}_clock_$c"); done
   done
 }
 
 stage_e4() {
-  for k in 2 3; do for m in gru_d latent_ode latent_sde; do JOBS[e4_${m}_$k]=$(submit "e4-$m-every$k" "$PY scripts/run/train.py model=$m data=avocado +experiment=sampling_every$k"); done; done
+  for k in 2 3; do for m in latent_ode latent_sde transformer; do JOBS[e4_${m}_$k]=$(submit "e4-$m-every$k" "$PY scripts/run/train.py model=$m data=avocado +experiment=sampling_every$k"); done; done
   # photo-count curves come from e1's metrics_by_n_obs.json; evaluating daily-trained models on sparser visits:
-  local deps=(); for m in gru_d latent_ode latent_sde; do [[ -n "${JOBS[e1_$m]:-}" && "${JOBS[e1_$m]}" != local ]] && deps+=("${JOBS[e1_$m]}"); done
-  JOBS[e4_eval]=$(submit e4-eval "for m in gru_d latent_ode latent_sde; do for k in 2 3; do $PY scripts/run/evaluate.py outputs/runs/\${m}_avocado --every \$k; done; done" "${deps[@]}")
+  local deps=(); for m in latent_ode latent_sde transformer; do [[ -n "${JOBS[e1_$m]:-}" && "${JOBS[e1_$m]}" != local ]] && deps+=("${JOBS[e1_$m]}"); done
+  JOBS[e4_eval]=$(submit e4-eval "for m in latent_ode latent_sde transformer; do for k in 2 3; do $PY scripts/run/evaluate.py outputs/runs/\${m}_avocado --every \$k; done; done" "${deps[@]}")
 }
 
 stage_e6() {
   # the raw A2SL data (scans, photos) is not in git; without it e6 would fail and block summary
   [[ -f data/a2sl/scans_avocado_jun2023.npz ]] || { echo "e6 skipped: data/a2sl not present (docs/data/data_a2sl.md)" >&2; return; }
-  for m in gru_d latent_sde fpt_filter; do JOBS[e6_$m]=$(submit "e6-$m" "$PY scripts/run/train.py model=$m data=a2sl horizon=20 train.batch_size=8"); done
+  for m in latent_sde transformer; do JOBS[e6_$m]=$(submit "e6-$m" "$PY scripts/run/train.py model=$m data=a2sl horizon=20 train.batch_size=8"); done
   JOBS[e6_gen]=$(submit e6-generative "$PY scripts/run/train.py model=latent_sde data=a2sl horizon=20 train.batch_size=8 model.decode_features=true run_name=latent_sde_a2sl_generative")
 }
 
@@ -145,13 +143,12 @@ AVOCADO_RUNS=()
 for m in "${MODELS[@]}"; do AVOCADO_RUNS+=("model=$m"); done
 AVOCADO_RUNS+=("model=latent_sde +experiment=labels_only"
   "model=latent_sde model.event_likelihood=pde run_name=latent_sde_avocado_pde"
-  "model=latent_sde model.event_likelihood=mc run_name=latent_sde_avocado_mc"
-  "model=fpt_filter run_name=fpt_filter_avocado_exact")
+  "model=latent_sde model.event_likelihood=mc run_name=latent_sde_avocado_mc")
 for g in T10 T20 Tamb; do
-  for m in direct_reg gru_d latent_sde fpt_filter; do AVOCADO_RUNS+=("model=$m +experiment=logo splits.held_out=$g"); done
+  for m in latent_sde transformer; do AVOCADO_RUNS+=("model=$m +experiment=logo splits.held_out=$g"); done
   for c in group fixed; do AVOCADO_RUNS+=("model=latent_sde +experiment=logo splits.held_out=$g model.clock=$c run_name=latent_sde_avocado_logo_${g}_clock_$c"); done
 done
-for k in 2 3; do for m in gru_d latent_ode latent_sde; do AVOCADO_RUNS+=("model=$m +experiment=sampling_every$k"); done; done
+for k in 2 3; do for m in latent_ode latent_sde transformer; do AVOCADO_RUNS+=("model=$m +experiment=sampling_every$k"); done; done
 
 stage_seeds() {
   local seeds="${RIPEN_SEEDS:-1 2 3 4 5}" i=0 deps=()
@@ -184,25 +181,15 @@ for g in T10 T20 Tamb; do for c in group fixed; do
 done; done
 for k in 2 3; do R2B_RUNS+=("model=latent_sde $R2_GUIDE +experiment=sampling_every$k run_name=latent_sde_avocado_every${k}_guided_r18"); done
 A2SL_ARGS="data=a2sl horizon=20 train.batch_size=8"
-R2B_RUNS+=("model=latent_sde $A2SL_ARGS $R2_GUIDE run_name=latent_sde_a2sl_guided_r18"
-  "model=gru_d $A2SL_ARGS" "model=fpt_filter $A2SL_ARGS")
+R2B_RUNS+=("model=latent_sde $A2SL_ARGS $R2_GUIDE run_name=latent_sde_a2sl_guided_r18")
 
-# New baselines (classical degradation + landmark Cox; neural CDE + transformer): pilot/sweep on seed 1, then 5 seeds
+# Transformer baseline: pilot/sweep on seed 1, then 5 seeds
 # on E1, E3 (3 held-out groups), E4 (every 2nd / 3rd day) and A2SL -> outputs/avocado/baselines/
-read -r -a NB_MODELS <<< "${RIPEN_NB_MODELS:-wiener gamma_process landmark_cox neural_cde transformer}"
-NB_SWEEP=("model=neural_cde run_name=sweep_cde_h32" "model=neural_cde model.hidden=64 model.visit_dim=32 run_name=sweep_cde_h64"
-  "model=neural_cde train.lr=3e-4 run_name=sweep_cde_h32_lr3e-4"
-  "model=transformer run_name=sweep_tf_d64_l2" "model=transformer model.d_model=32 model.layers=1 run_name=sweep_tf_d32_l1"
+read -r -a NB_MODELS <<< "${RIPEN_NB_MODELS:-transformer}"
+NB_SWEEP=("model=transformer run_name=sweep_tf_d64_l2" "model=transformer model.d_model=32 model.layers=1 run_name=sweep_tf_d32_l1"
   "model=transformer train.lr=3e-4 run_name=sweep_tf_d64_l2_lr3e-4" "model=transformer model.d_model=64 model.layers=3 run_name=sweep_tf_d64_l3")
-# the classical models have a handful of parameters: they need a larger step and more epochs (60 at 1e-3 had not converged)
-for m in wiener gamma_process landmark_cox; do for lr in 1e-3 1e-2 3e-2; do
-  NB_SWEEP+=("model=$m train.lr=$lr train.epochs=200 train.patience=30 run_name=sweep_${m}_lr$lr"); done; done
-# chosen by val CRPS on the seed-1 sweep (outputs/avocado/baselines_sweep/): CDE hidden 64; transformer d=32, 1 layer
-NB_ARGS_neural_cde="${NB_ARGS_neural_cde:-model.hidden=64 model.visit_dim=32}"
+# chosen by val CRPS on the seed-1 sweep (outputs/avocado/baselines_sweep/): transformer d=32, 1 layer
 NB_ARGS_transformer="${NB_ARGS_transformer:-model.d_model=32 model.layers=1}"
-NB_ARGS_landmark_cox="${NB_ARGS_landmark_cox:-train.lr=3e-2 train.epochs=200 train.patience=30}"
-NB_ARGS_gamma_process="${NB_ARGS_gamma_process:-train.lr=3e-2 train.epochs=200 train.patience=30}"
-NB_ARGS_wiener="${NB_ARGS_wiener:-}"   # default lr/epochs had the best val CRPS (1.33 vs 1.36-1.37)
 nb_runs() {
   NB_RUNS=()
   for m in "${NB_MODELS[@]}"; do
@@ -238,7 +225,7 @@ seed_jobs() {
 
 stage_r2() { RIPEN_SUMMARY_ARGS="--suffix _guided_r18" seed_jobs r2 outputs/avocado/round2 "${R2_RUNS[@]}"; }
 stage_r2b() { RIPEN_SUMMARY_ARGS="--suffix _guided_r18" seed_jobs r2b outputs/avocado/round2 "${R2B_RUNS[@]}"; }
-# the new baselines are small: run them on CPU (RIPEN_GPU=none, JAX_PLATFORMS=cpu) so they don't queue behind GPU jobs
+# the transformer is small: run it on CPU (RIPEN_GPU=none, JAX_PLATFORMS=cpu) so they don't queue behind GPU jobs
 stage_nb_sweep() {
   local runs=("${NB_SWEEP[@]}"); [[ -n "${RIPEN_SWEEP_FILTER:-}" ]] && mapfile -t runs < <(printf '%s\n' "${NB_SWEEP[@]}" | grep -E "$RIPEN_SWEEP_FILTER")
   RIPEN_MEM=32G RIPEN_GPU=none JAX_PLATFORMS=cpu RIPEN_SEEDS=1 seed_jobs nbsweep outputs/avocado/baselines_sweep "${runs[@]}"
@@ -247,7 +234,7 @@ stage_nb() { nb_runs; RIPEN_MEM=32G RIPEN_GPU=none JAX_PLATFORMS=cpu seed_jobs n
 
 # Mango study (docs: docs/experiments/2026-11-06_mango-photo-vs-microwave/report.md): CPU jobs, one per model x input setting, each looping 3 seeds x 6 folds
 # (one process per seed: XLA's CPU code cache grows with every fold's freshly-jitted train step)
-MANGO_MODELS=(${RIPEN_MANGO_MODELS:-gru_gap gru_d ode_rnn neural_cde transformer latent_sde latent_ode fpt_filter})
+MANGO_MODELS=(${RIPEN_MANGO_MODELS:-transformer latent_sde latent_ode})
 MANGO_SETTINGS=(${RIPEN_MANGO_SETTINGS:-rgb mw both samd})
 stage_mango_data() {
   JOBS[mango_data]=$(RIPEN_GPU=none submit mango-data \
@@ -274,7 +261,7 @@ stage_mango() {
 # no-sensor control. RIPEN_VIEW_LABELS=input reruns the presented setup (labels as inputs); default hidden. Jobs alternate
 # GPU / 2-CPU so more run at once under the per-user caps (4 GPUs, 32 CPUs). RIPEN_SCAN_STD=1: z-scored microwave
 # numbers (round 3), into labels_<mode>_std (and outputs/a2sl_aml_std for a2sl-aml).
-VIEW_MODELS=(${RIPEN_VIEW_MODELS:-latent_sde fpt_filter})
+VIEW_MODELS=(${RIPEN_VIEW_MODELS:-latent_ode latent_sde})
 stage_a2sl_views() {
   local deps=() m i v j n=0 lab="${RIPEN_VIEW_LABELS:-hidden}" args=() std="" sfx=""
   if [[ "${RIPEN_SCAN_STD:-0}" == 1 ]]; then std="data.scan_standardize=true "; sfx="_std"; fi

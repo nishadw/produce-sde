@@ -31,10 +31,7 @@ OTHERS = ["avo04", "avo05", "avo06", "avo07", "avo08", "avo09", "avo10", "avo12"
 N_FOLDS = len(TRACKED)
 MODEL_ARGS = {
     "latent_sde": ["model=latent_sde", "model.posterior_guidance=true", "model.event_mean=log_mean"],
-    "fpt_filter": ["model=fpt_filter"],
-    "gru_d": ["model=gru_d"],
     "latent_ode": ["model=latent_ode"],
-    "neural_cde": ["model=neural_cde"],
 }
 INPUT_ARGS = {
     "mw": ["data.features_file=null", "data.photo_dim=0"],
@@ -43,8 +40,7 @@ INPUT_ARGS = {
     "time": ["model.use_images=false"],  # labels hidden: no features at all (see main)
 }
 HIDDEN_ARGS = {"latent_sde": ["model.use_stages=false", "model.posterior_guidance=false"],
-               "fpt_filter": ["model.use_stages=false"], "gru_d": ["model.use_stages=false"],
-               "latent_ode": ["model.use_stages=false"], "neural_cde": ["model.use_stages=false"]}  # fmt: skip
+               "latent_ode": ["model.use_stages=false"]}  # fmt: skip
 
 
 def fold_path(k: int) -> Path:

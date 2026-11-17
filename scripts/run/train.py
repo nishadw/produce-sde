@@ -1,7 +1,7 @@
 """Train one model on one dataset and evaluate it. Everything is driven by configs/.
 
 python scripts/run/train.py model=latent_sde data=synthetic
-python scripts/run/train.py model=gru_d data=avocado train=default
+python scripts/run/train.py model=latent_sde data=avocado train=default
 python scripts/run/train.py +experiment=logo splits.held_out=T20 model=latent_sde data=avocado
 """
 

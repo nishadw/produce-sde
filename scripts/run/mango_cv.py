@@ -45,7 +45,6 @@ OVERRIDES = {
     "latent_sde": {"posterior_guidance": False, "event_mean": "log_mean",
                    "clock_kwargs": {"ea_j_mol": 50000.0, "rate_ref": 0.3, "t_ref_c": 20.0}},
     "latent_ode": {"clock_kwargs": {"ea_j_mol": 50000.0, "rate_ref": 0.3, "t_ref_c": 20.0}},
-    "fpt_filter": {"image_emission": "always", "clock_kwargs": {"ea_j_mol": 50000.0, "rate_ref": 0.3, "t_ref_c": 20.0}},
 }  # fmt: skip
 
 

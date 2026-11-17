@@ -29,7 +29,9 @@ The PDE solver matches the inverse-Gaussian first-passage law to 1e-3; parameter
 
 Each study has a technical write-up with every table in [`docs/experiments/`](docs/experiments) and a plain-language
 Word report, built by `scripts/reports/` into `../results` (a `results/` folder next to the repo, outside git). File
-names start with the date the study was first run. MAE = mean absolute error in days; CRPS = continuous ranked
+names start with the date the study was first run. Since 2026-11-17 the code keeps only the latent ODE, latent SDE
+and transformer (plus CAML-style KD and SAMD training); the other baselines in the older studies are in git history
+before that date. Next study: [A2SL fill-in + random start](docs/plans/2026-11-17_a2sl-imputation-random-start.md). MAE = mean absolute error in days; CRPS = continuous ranked
 probability score (lower is better for both).
 
 | Date | Study | Headline |
@@ -59,7 +61,7 @@ without SLURM).
 ```
 src/ripen/          the package
   data/               loaders (public avocado, lab avocado + mango, synthetic), item schema, splits
-  models/             latent SDE / ODE, first-passage PDE and filter, temperature clocks, 12 baselines
+  models/             latent SDE / ODE, first-passage PDE, temperature clocks, transformer
   train/              training loop, AML / CAML distillation, SAMD
   eval/               metrics (censored log score, CRPS, coverage, C-index), recalibration, mango scoring
 src/nsde/           general SDE solver with a gradient-method switch (backprop / checkpoint / adjoint)

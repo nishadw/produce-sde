@@ -1,7 +1,7 @@
 PY ?= python
 DATA ?= avocado
 
-.PHONY: help install lint test smoke synthetic synthetic-quick splits features baselines sequence sde all-models \
+.PHONY: help install lint test smoke synthetic synthetic-quick splits features all-models \
         ablation-sampling ablation-photos logo gradients summary foundations
 
 help:
@@ -35,25 +35,17 @@ splits:             ## write the item-level split files for $(DATA)
 features:           ## cache ResNet-18 features for the avocado photos (needs [features] extra)
 	$(PY) scripts/data/extract_features.py --data avocado --root data/avocado --out data/features/avocado_resnet18.npz
 
-baselines:          ## per-photo baselines on $(DATA)
-	for m in stage_linear direct_reg discrete_surv; do $(PY) scripts/run/train.py model=$$m data=$(DATA); done
-
-sequence:           ## GRU / GRU-D / ODE-RNN on $(DATA)
-	for m in gru_gap gru_d ode_rnn; do $(PY) scripts/run/train.py model=$$m data=$(DATA); done
-
-sde:                ## latent ODE, latent SDE and the exact filter on $(DATA)
-	for m in latent_ode latent_sde fpt_filter; do $(PY) scripts/run/train.py model=$$m data=$(DATA); done
-
-all-models: baselines sequence sde   ## everything above
+all-models:         ## latent ODE, latent SDE and the transformer on $(DATA)
+	for m in latent_ode latent_sde transformer; do $(PY) scripts/run/train.py model=$$m data=$(DATA); done
 
 ablation-sampling:  ## direction 3: photos every 2 / 3 days
-	for k in 2 3; do for m in gru_d latent_ode latent_sde; do $(PY) scripts/run/train.py model=$$m data=$(DATA) +experiment=sampling_every$$k; done; done
+	for k in 2 3; do for m in latent_ode latent_sde transformer; do $(PY) scripts/run/train.py model=$$m data=$(DATA) +experiment=sampling_every$$k; done; done
 
 ablation-photos:    ## direction 4: metrics vs number of visible photos, from finished runs
-	for m in gru_d latent_ode latent_sde; do $(PY) scripts/run/evaluate.py outputs/runs/$${m}_$(DATA) --n-obs 1 2 3 5 8; done
+	for m in latent_ode latent_sde transformer; do $(PY) scripts/run/evaluate.py outputs/runs/$${m}_$(DATA) --n-obs 1 2 3 5 8; done
 
 logo:               ## train on two storage groups, test on the third
-	for g in T10 T20 Tamb; do for m in direct_reg gru_d latent_sde; do $(PY) scripts/run/train.py model=$$m data=$(DATA) +experiment=logo splits.held_out=$$g; done; done
+	for g in T10 T20 Tamb; do for m in latent_sde transformer; do $(PY) scripts/run/train.py model=$$m data=$(DATA) +experiment=logo splits.held_out=$$g; done; done
 
 gradients:          ## backprop vs checkpointing vs adjoint for the latent SDE
 	for m in backprop checkpoint adjoint; do $(PY) scripts/run/train.py model=latent_sde data=$(DATA) +experiment=gradient_methods model.method=$$m; done

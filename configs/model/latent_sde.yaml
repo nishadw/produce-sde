@@ -5,7 +5,7 @@ latent_dim: 4
 hidden: 64
 visit_dim: 32
 width: 32
-encoder: gru               # gru | gru_d | ode_rnn (the posterior context encoder)
+encoder: gru               # the posterior context encoder
 use_images: true
 use_stages: true
 decode_features: false     # also reconstruct the photo features from Z (generative variant, e6)

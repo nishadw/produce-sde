@@ -35,7 +35,7 @@ def _items(x: np.ndarray, stage=None) -> list[Item]:
     return out
 
 
-@pytest.mark.parametrize("name", ["gru_gap", "transformer", "latent_sde", "fpt_filter"])
+@pytest.mark.parametrize("name", ["transformer", "latent_sde"])
 def test_reset_teacher_is_exact(name):
     """With the auxiliary columns zeroed, the teacher computes exactly the student's function, whatever I_A is."""
     rng = np.random.default_rng(0)
@@ -46,8 +46,6 @@ def test_reset_teacher_is_exact(name):
     cfg = {"name": name, "horizon": 6, "use_stages": False}
     if name == "latent_sde":
         cfg.update({"pde_steps": 400, "n_samples": 8})
-    if name == "fpt_filter":
-        cfg.update({"pde_steps": 400})
     student = build_model(cfg, s_info, jax.random.PRNGKey(1))
     teacher = reset_teacher(build_model(cfg, t_info, jax.random.PRNGKey(2)), student, n_main=4)
     sb, tb = collate(s_items, s_info, n_obs="all"), collate(t_items, t_info, n_obs="all")
