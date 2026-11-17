@@ -148,10 +148,10 @@ def _write_fake_manifests(tmp: Path):
             ]
         )
     }
-    feats = {
-        "01_side.jpg": np.ones(8, np.float32),
-        "04_side.jpg": np.zeros(8, np.float32),
-        "1_01.jpg": np.ones(8, np.float32),
+    feats = {  # keyed like photo_key: "<day folder>__<file>", a different vector per visit
+        **{f"day{d}__01_side.jpg": np.full(8, float(d), np.float32) for d in (1, 3, 5)},
+        "day1__04_side.jpg": np.zeros(8, np.float32),
+        "q__1_01.jpg": np.ones(8, np.float32),
     }
     return man, scans, feats
 
@@ -166,6 +166,10 @@ def test_loaders_on_fake_manifests(tmp_path):
     assert [v.stage for v in labelled[0].visits] == [1, 2, 3] and labelled[0].right_censored
     assert a4.n_visits == 1 and a4.meta["cut_day"] == 1 and a4.meta["cut_photo"] == ["p/day1/04_cut.jpg"]
     assert a1.visits[0].features.shape == (1, 8 + 2 * (4 + SCAN_RADIAL_BINS))
+    # every visit gets its own photo (a file-name-keyed cache gave every visit the fruit's last photo)
+    assert [float(v.features[0, 0]) for v in a1.visits] == [1.0, 3.0, 5.0]
+    with pytest.raises(ValueError, match="re-extract"):
+        load_a2sl_avocado(man, features={"01_side.jpg": np.ones(8, np.float32)}, scans=scans, photo_dim=8)
     info = dataset_info(items)
     b = collate(items, info, n_obs="all")
     assert b.feat.shape[-1] == info.feat_dim and bool(b.right_censored.all())

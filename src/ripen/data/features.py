@@ -41,12 +41,23 @@ class HashFeaturizer:
 
 
 def extract_features(
-    paths: list[str], backbone: str = "resnet18", batch_size: int = 64, device: str = "cpu", image_size: int = 224
+    paths: list[str],
+    backbone: str = "resnet18",
+    batch_size: int = 64,
+    device: str = "cpu",
+    image_size: int = 224,
+    key_fn=None,
 ) -> dict[str, np.ndarray]:
-    """Run a frozen ImageNet backbone over ``paths``; returns ``{filename: (D,) float32}``.
+    """Run a frozen ImageNet backbone over ``paths``; returns ``{key_fn(path): (D,) float32}``.
 
+    ``key_fn`` defaults to the file name. Keys must be unique: a dataset that reuses file names across folders (the
+    A2SL photos, ``day03/01_side.jpg``) must pass its own ``key_fn`` (``ripen.data.a2sl.photo_key``).
     Uses global-average-pooled features (the layer before the classifier).
     """
+    key_fn = key_fn or (lambda p: Path(p).name)
+    keys = [key_fn(p) for p in paths]
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"{len(keys) - len(set(keys))} duplicate feature keys; pass a key_fn that is unique per photo")
     import torch
     import torchvision
     from PIL import Image
@@ -70,5 +81,5 @@ def extract_features(
             x = torch.stack([tf(Image.open(p).convert("RGB")) for p in chunk]).to(device)
             f = model(x).float().cpu().numpy()
             for p, v in zip(chunk, f, strict=True):
-                out[Path(p).name] = v.astype(np.float32)
+                out[key_fn(p)] = v.astype(np.float32)
     return out

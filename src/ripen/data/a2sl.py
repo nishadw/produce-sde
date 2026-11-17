@@ -108,10 +108,20 @@ def _scan_features(
     return np.concatenate([arr.mean(0), arr.std(0)]).astype(np.float32)  # mean and spread over rotation angles
 
 
+def photo_key(path: str) -> str:
+    """Feature-cache key of one A2SL photo: ``<day folder>__<file>``. The file name alone (``01_side.jpg``) repeats
+    every visit, so a name-keyed cache held one photo per fruit (its last) for every visit; fixed 2026-11-17."""
+    p = Path(path)
+    return f"{p.parent.name}__{p.name}"
+
+
 def _photo_feature(paths: list[str], features: dict[str, np.ndarray] | None) -> np.ndarray | None:
     if features is None:
         return None
-    vecs = [features[Path(p).name] for p in paths if Path(p).name in features]
+    if features and not any("__" in k for k in features):
+        raise ValueError("A2SL feature cache is keyed by file name (one photo per fruit); re-extract it with "
+                         "scripts/data/extract_features.py --data a2sl")  # fmt: skip
+    vecs = [features[photo_key(p)] for p in paths if photo_key(p) in features]
     return np.stack(vecs).mean(0).astype(np.float32) if vecs else None
 
 

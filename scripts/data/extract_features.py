@@ -52,7 +52,10 @@ def main() -> None:
         print(f"skipping {len(missing)} missing photos, e.g. {missing[:3]}")
         paths = sorted(set(paths) - set(missing))
     print(f"{len(items)} items, {len(paths)} photos -> {args.backbone} on {args.device}")
-    feats = extract_features(paths, args.backbone, args.batch_size, args.device)
+    key_fn = None
+    if args.data == "a2sl":
+        from ripen.data.a2sl import photo_key as key_fn
+    feats = extract_features(paths, args.backbone, args.batch_size, args.device, key_fn=key_fn)
     save_feature_cache(args.out, feats)
     print(f"wrote {args.out}")
 
