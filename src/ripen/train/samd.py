@@ -31,7 +31,7 @@ import numpy as np
 import optax
 
 from ..data.collate import DatasetInfo, choose_n_obs, collate
-from ..data.schema import Item
+from ..data.schema import Item, all_starts, paired_random_start, random_start
 from .loop import TrainConfig, evaluate_loss
 
 FEATURE_FIELDS = ("visit_enc", "seq_enc")
@@ -142,6 +142,8 @@ def train_samd(
         for i in range(0, len(items), cfg.batch_size):
             yield [items[j] for j in order[i : i + cfg.batch_size]]
 
+    if cfg.random_start:  # early stopping on every start of the validation fruit
+        stu_val = all_starts(stu_val, cfg.random_start_max)
     best, best_val, bad, hist, t0 = student, float("inf"), 0, [], time.time()
     for r in range(rounds):
         teacher = reset_teacher(teacher, student, n_main)
@@ -149,6 +151,8 @@ def train_samd(
             t_state = opt.init(eqx.filter(teacher, eqx.is_inexact_array))
             for _ in range(k):
                 for chunk in batches(tea_train, info_t):
+                    if cfg.random_start:
+                        chunk = random_start(chunk, cfg.random_start_max, rng)
                     key, sub = jax.random.split(key)
                     batch = collate(chunk, info_t, n_obs="random", rng=rng)
                     teacher, t_state, _ = t_step(teacher, t_state, batch, sub)
@@ -156,10 +160,13 @@ def train_samd(
         for e in range(k):
             tot, n = 0.0, 0
             for chunk in batches(stu_train, info_s):
+                tchunk = [tea_by_id[pair[it.item_id]] for it in chunk]
+                if cfg.random_start:  # the same start for student and teacher
+                    chunk, tchunk = paired_random_start(chunk, tchunk, cfg.random_start_max, rng)
                 # one visible prefix per fruit, shared by student and teacher (all visits for snapshot data)
                 n_obs = [choose_n_obs(it, cfg.n_obs_mode, rng) for it in chunk]
                 sb = collate(chunk, info_s, n_obs=n_obs)
-                tb = collate([tea_by_id[pair[it.item_id]] for it in chunk], info_t, n_obs=n_obs)
+                tb = collate(tchunk, info_t, n_obs=n_obs)
                 key, sub = jax.random.split(key)
                 w = None if has_aux is None else jnp.asarray([float(has_aux[it.item_id]) for it in chunk])
                 student, s_state, loss = s_step(student, s_state, teacher, sb, tb, w, sub)

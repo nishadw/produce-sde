@@ -33,7 +33,7 @@ import numpy as np
 import optax
 
 from ..data.collate import DatasetInfo, choose_n_obs, collate
-from ..data.schema import Item
+from ..data.schema import Item, all_starts, paired_random_start
 from .loop import TrainConfig, evaluate_loss
 from .samd import features
 
@@ -206,12 +206,18 @@ def train_distill(
         upd, st = opt.update(g, st, eqx.filter(m, eqx.is_inexact_array))
         return eqx.apply_updates(m, upd), st, loss, task
 
+    if cfg.random_start:  # early stopping on every start of the validation fruit
+        stu_val = all_starts(stu_val, cfg.random_start_max)
     best, best_val, bad, hist, t0, n_steps = student, float("inf"), 0, [], time.time(), 0
     for epoch in range(cfg.epochs):
         tot, tot_task, n = 0.0, 0.0, 0
         for chunk, n_obs in paired_batches(stu_train, cfg.batch_size, rng, cfg.n_obs_mode):
+            tchunk = [tea_by_id[it.item_id] for it in chunk]
+            if cfg.random_start:  # the same start for student and teacher, then a prefix of what is left
+                chunk, tchunk = paired_random_start(chunk, tchunk, cfg.random_start_max, rng)
+                n_obs = [choose_n_obs(it, cfg.n_obs_mode, rng) for it in chunk]
             sb = collate(chunk, info_s, n_obs=n_obs)
-            tb = collate([tea_by_id[it.item_id] for it in chunk], info_t, n_obs=n_obs)
+            tb = collate(tchunk, info_t, n_obs=n_obs)
             w = None if has_aux is None else jnp.asarray([float(has_aux[it.item_id]) for it in chunk])
             key, sub = jax.random.split(key)
             student, state, loss, task = step(student, state, teacher, sb, tb, w, sub)

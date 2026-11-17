@@ -196,3 +196,14 @@ def all_starts(items: list[Item], max_shift: float) -> list[Item]:
             sh = shift_start(it, k)
             out.append(sh if k == 0 else replace(sh, item_id=f"{it.item_id}@{k}"))
     return out
+
+
+def paired_random_start(
+    items: list[Item], partners: list[Item], max_shift: float, rng: np.random.Generator
+) -> tuple[list[Item], list[Item]]:
+    """One random start per fruit, applied to both views of it (student and teacher items of the same fruit and
+    visits), so distillation compares forecasts made from the same visits."""
+    ks = [int(rng.choice(start_choices(it, max_shift))) for it in items]
+    return [shift_start(it, k) for it, k in zip(items, ks, strict=True)], [
+        shift_start(p, k) for p, k in zip(partners, ks, strict=True)
+    ]

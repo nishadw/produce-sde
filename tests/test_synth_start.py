@@ -9,7 +9,15 @@ from test_a2sl import _write_fake_manifests
 from ripen.data.a2sl import load_a2sl_avocado
 from ripen.data.a2sl_synth import build_half_synthetic
 from ripen.data.collate import choose_n_obs
-from ripen.data.schema import Item, Visit, all_starts, random_start, shift_start, start_choices
+from ripen.data.schema import (
+    Item,
+    Visit,
+    all_starts,
+    paired_random_start,
+    random_start,
+    shift_start,
+    start_choices,
+)
 
 
 def _item(n=5, lo=6.0, hi=8.0):
@@ -53,3 +61,11 @@ def test_half_synthetic_keeps_the_window_and_extrapolates_to_day_15(tmp_path, me
     assert all(np.isfinite(v.features).all() for v in a1.visits)
     # models never see past the first spoiled visit, even with every visit requested
     assert choose_n_obs(a1, "all", None) == 5 and choose_n_obs(real, "all", None) == real.n_visits
+
+
+def test_paired_random_start_shifts_student_and_teacher_alike():
+    stu = [_item() for _ in range(40)]
+    tea = [_item() for _ in range(40)]
+    s2, t2 = paired_random_start(stu, tea, 6.0, np.random.default_rng(1))
+    assert [x.visits[0].features[0, 0] for x in s2] == [x.visits[0].features[0, 0] for x in t2]
+    assert len({x.n_visits for x in s2}) > 1  # the starts do vary

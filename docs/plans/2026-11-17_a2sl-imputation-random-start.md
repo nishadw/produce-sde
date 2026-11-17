@@ -165,7 +165,7 @@ This replaces the fill-in of training fruit only.
    - Visits are kept to day 15.
    - A model never sees more than the first spoiled visit, because a forecast made after spoilage has no target.
 
-**Check on real data** (`scratch/check_synth.py`): for the tracked fruit, the synthetic day-7 and day-9 photos sit
+**Check on real data** (`scripts/analysis/a2sl_synth_check.py`): for the tracked fruit, the synthetic day-7 and day-9 photos sit
 about as far from the real ones as one real day-5 → 7 change. Logistic is about twice as far off by day 9.
 
 **Scoring.**
@@ -176,8 +176,8 @@ about as far from the real ones as one real day-5 → 7 change. Logistic is abou
 **Runs.** Jobs run from a frozen worktree (`scripts/run/_snap.sh`); `scripts/run/submit_synth.sh` submits them.
 - `outputs/a2sl_synth_rs`: latent ODE / SDE × {photo × linear / logistic, date only} × start fixed / random.
 - `outputs/a2sl_synth_aml/<synth>`: latent ODE / SDE. Methods: photo, teacher, CAML-KD and SAMD, each with the
-  scanner (all six views pooled) and without it (photo-only teacher). Fixed start only, because the AML loops do not
-  have random start yet.
+  scanner (all six views pooled) and without it (photo-only teacher). **Random start** (`paired_random_start`): each
+  fruit gets one start, shared by its student and teacher copies.
 - 5 seeds × 4 folds each.
 
 The 4 photo-fix reruns that had failed (two of them because the code was edited mid-run) were resubmitted from a
