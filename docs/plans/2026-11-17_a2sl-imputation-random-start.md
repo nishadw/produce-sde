@@ -1,7 +1,7 @@
 # Plan: fill in the missing A2SL visits, then train with a random start (2026-11-17)
 
 Models from here on: latent ODE, latent SDE, CAML-style KD and SAMD (both distil into a photo-only latent ODE/SDE),
-and later the transformer. Status: **plan, nothing run yet.** Open questions are at the end.
+and later the transformer. Status: steps 0–3 done (2026-11-17); see *Results so far*. Open questions are at the end.
 
 ## 0. What the data actually looks like
 
@@ -114,3 +114,36 @@ also sees scans) against photo only: 3 methods × 20 = 60 more. Transformer late
 2. Labels: keep the day rule, or label the 7 cut photos (and the pilot cut photos) per fruit with the lab?
 3. Use the pilot set (2 more fruit with daily photos to day 13)?
 4. Random start on training only, or also report by start day at test (plan assumes both)?
+
+## Results so far (2026-11-17)
+
+**Step 0.** The code now keeps only the latent ODE, the latent SDE and the transformer (commit `fa8c547`).
+
+**Bug found while building step 1** (fixed in commit `1d78ff7`):
+- The A2SL photo-feature cache was keyed by file name, but every day folder reuses the same names
+  (`day03/01_side.jpg`). The 61 June photos collapsed to 15 cache keys.
+- So every visit of a fruit got that fruit's **last** photo: day 13 for the tracked fruit, the cut-day photo for
+  the cut fruit.
+- Every earlier A2SL result that used photos is affected: the photo rows of the views study, the whole AML study
+  and the brief. The scan features were keyed correctly.
+- The cache is re-extracted (281 photos), and a test checks that each visit gets its own photo.
+
+**Steps 1–3, extrapolation check** (`scripts/analysis/a2sl_impute.py`, `outputs/a2sl_impute/`):
+- Setup: leave out one tracked fruit, fit the fill on the other fruit, extrapolate the held-out fruit from its own
+  days 1–5 to days 7–13, and compare with its real photos.
+- Error is the distance in PCA space, averaged over the 4 tracked fruit and over days 7–13.
+
+| Fill | k = 4 | k = 8 |
+|---|---|---|
+| linear, fit on days 1–5 only (truncation rule) | 12.6 | 14.4 |
+| S-curve, fit on days 1–5 only | 7.2 | 7.3 |
+| linear, fit on every observed visit | **4.1** | **5.0** |
+| S-curve, fit on every observed visit | 4.5 | 6.1 |
+| carry the day-5 photo forward | 4.3 | 5.7 |
+| the fruit's own day 1–5 mean | 5.7 | 6.6 |
+
+- Fitting only on the shared window extrapolates badly: the linear fill is 3× worse than carrying the day-5 photo
+  forward, and its error grows with every day.
+- Fitting on every observed visit is the best fill, but it only slightly beats carry-forward. The cut fruit's later
+  photos are what make it work.
+- Step 4 should therefore use the linear fill fit on every visit, with carry-forward as the control arm.
