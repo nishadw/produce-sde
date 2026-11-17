@@ -46,7 +46,14 @@ from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, N_FOLDS, fold_path, scan_view_ar
 
 from ripen.data.schema import all_starts  # noqa: E402
 from ripen.models import build_model  # noqa: E402
-from ripen.pipeline import dataset_info, evaluate_and_write, load_items, model_cfg_dict, select  # noqa: E402
+from ripen.pipeline import (  # noqa: E402
+    dataset_info,
+    evaluate_and_write,
+    load_items,
+    model_cfg_dict,
+    real_test_items,
+    select,
+)
 from ripen.train import TrainConfig, train  # noqa: E402
 from ripen.train.aml import METHODS as AML_METHODS  # noqa: E402
 from ripen.train.aml import train_distill  # noqa: E402
@@ -201,12 +208,18 @@ def main() -> None:
                     model, _ = train_distill(student, teacher, tr_s, va_s, t_by_id, info_s, info_t, tcfg, k_st,
                                              spec=spec, has_aux=has_aux)  # fmt: skip
                 info, te, va = info_s, te_s, va_s
+            te_real = real_test_items(cfg, sp["test"])  # half-synthetic data: also score the real visits
+            if te_real is not None and a.method != "teacher":
+                te_real = photo_only(te_real, n_main)
             if a.eval_all_starts:
                 te = all_starts(te, float(tcfg.random_start_max))
+                te_real = None if te_real is None else all_starts(te_real, float(tcfg.random_start_max))
             (out / "info.json").write_text(json.dumps(info.to_dict(), indent=2))
             k1, k2 = jax.random.split(k_ev)
             evaluate_and_write(model, va, info, cfg, out, k2, tag="val")
             o = evaluate_and_write(model, te, info, cfg, out, k1, tag="test")["overall"]
+            if te_real is not None:
+                evaluate_and_write(model, te_real, info, cfg, out, jax.random.fold_in(k1, 1), tag="test_real")
             print(f"   test MAE {o['mae']:.2f}  CRPS {o['crps']:.2f}  cov80 {o['coverage80']:.2f}", flush=True)
 
 

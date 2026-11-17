@@ -148,32 +148,37 @@ also sees scans) against photo only: 3 methods × 20 = 60 more. Transformer late
   photos are what make it work.
 - Step 4 should therefore use the linear fill fit on every visit, with carry-forward as the control arm.
 
-## In progress (2026-11-17)
+## Revised design (2026-11-17, evening): half-synthetic data for every run
 
-**Photo-fix reruns.** `scripts/run/rerun_photo_fix.sh` submitted 44 jobs:
-- the views study's photo and photo + scanner runs (3 seeds);
-- the AML ladder in `outputs/a2sl_schedule` (5 seeds).
+This replaces the fill-in of training fruit only.
 
-The stale runs are kept in `outputs/_superseded_photo_key_bug_2026-11-17/`.
+**Data** (`src/ripen/data/a2sl_synth.py`, config `data.synthetic=linear|logistic`):
+1. Cut to the window every kept fruit has real photos for: days 1–5. That keeps 9 fruit (avo01–03, 06–11). avo04,
+   05 and 12–15 have no photos on all of days 1, 3 and 5, so they are dropped. No window covers all 15 fruit.
+2. Fit a regression on the window and extrapolate every kept fruit to day 15. This includes the 4 tracked fruit;
+   their real days 7–13 are ignored. There are two arms:
+   - **linear:** a slope shared by all fruit plus each fruit's own offset;
+   - **logistic:** an S-curve with a shared shape and a per-fruit time shift.
+   Photos are fit in a 4-component PCA space. Scans are fit the same way: they exist in the window for the 4
+   tracked fruit and avo06, and the other fruit get the population curve.
+3. Labels follow the day rule (day 15 counts as spoiled).
+   - Visits are kept to day 15.
+   - A model never sees more than the first spoiled visit, because a forecast made after spoilage has no target.
 
-**Step 4, filled-in data** (`src/ripen/data/a2sl_fill.py`, config `data.fill=linear|carry`).
+**Check on real data** (`scratch/check_synth.py`): for the tracked fruit, the synthetic day-7 and day-9 photos sit
+about as far from the real ones as one real day-5 → 7 change. Logistic is about twice as far off by day 9.
 
-One consequence of the day-rule labels: the loader stops every fruit at its first spoiled visit, which is day 9. So
-days 11 and 13 are never used, and filling only completes:
-- the cut fruit avo04–07 forward to day 9;
-- with `fill_backward`, the late starters avo12–15 back to day 1.
+**Scoring.**
+- **Synthetic test fruit:** `predictions_test`. This score measures agreement with the regression curve.
+- **The tracked fruit's real visits:** `predictions_test_real`. This is the honest score.
+- Both are scored from every start.
 
-Each fold has only about 4 of these 8 fruit among its training fruit. Only training fruit are filled, from a fill
-fit on the training fruit, so test scores still come from real visits.
+**Runs.** Jobs run from a frozen worktree (`scripts/run/_snap.sh`); `scripts/run/submit_synth.sh` submits them.
+- `outputs/a2sl_synth_rs`: latent ODE / SDE × {photo × linear / logistic, date only} × start fixed / random.
+- `outputs/a2sl_synth_aml/<synth>`: latent ODE / SDE. Methods: photo, teacher, CAML-KD and SAMD, each with the
+  scanner (all six views pooled) and without it (photo-only teacher). Fixed start only, because the AML loops do not
+  have random start yet.
+- 5 seeds × 4 folds each.
 
-**Step 5, random start** (`train.random_start`, helpers `shift_start` / `all_starts` in `ripen.data.schema`).
-- Each epoch, every training fruit is seen from a random visit at most 6 days after its first visit, with time
-  re-zeroed there.
-- Early stopping uses every start of the validation fruit.
-- `data.eval_all_starts` scores each test fruit from every start (`avo01@k`).
-
-**Step 6, grid.** `scripts/run/submit_fill_rs.sh` submits:
-- a gated smoke job;
-- 16 grid jobs: latent ODE / SDE × {photo × fill none / linear / carry, date only} × start fixed / random, each
-  5 seeds × 4 folds;
-- the summary job, `scripts/analysis/a2sl_fill_rs_summary.py`, written to `outputs/a2sl_fill_rs/summary.md`.
+The 4 photo-fix reruns that had failed (two of them because the code was edited mid-run) were resubmitted from a
+snapshot.

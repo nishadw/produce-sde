@@ -123,7 +123,8 @@ def choose_n_obs(item: Item, mode: str | int, rng: np.random.Generator | None) -
             last_unspoiled = i
             break
     if mode == "all":
-        return n
+        # items that keep visits after the first spoiled one (a2sl_synth) never show those: no forecast target
+        return min(n, last_unspoiled + 1) if item.meta.get("post_spoil_visits") else n
     if mode == "random":
         if rng is None:
             raise ValueError("random n_obs needs an rng")

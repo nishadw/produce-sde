@@ -59,6 +59,18 @@ def load_items(data_cfg: DictConfig) -> list[Item]:
         )
         if data_cfg.get("include_pilot", False):
             items += load_a2sl_pilot(data_cfg.get("manifests", "data/manifests"), features=feats)
+        if data_cfg.get("synthetic"):  # half-synthetic: real window, regression-extrapolated after it
+            from .data.a2sl_synth import build_half_synthetic
+
+            items = build_half_synthetic(
+                items,
+                data_cfg.synthetic,
+                photo_dim=int(data_cfg.get("photo_dim", 512)),
+                has_scans=bool(data_cfg.get("scans_file")),
+                k=int(data_cfg.get("synthetic_k", 4)),
+                last_day=int(data_cfg.get("synthetic_last_day", 15)),
+                manifests=data_cfg.get("manifests", "data/manifests"),
+            )
     else:
         raise KeyError(f"unknown dataset {name!r}")
     every = int(data_cfg.get("subsample_every", 1) or 1)
@@ -66,6 +78,19 @@ def load_items(data_cfg: DictConfig) -> list[Item]:
         offset = int(data_cfg.get("subsample_offset", 0) or 0)
         items = [subsample_visits(it, every, offset) for it in items]
     return items
+
+
+def real_test_items(cfg: DictConfig, test_ids: list[str]) -> list[Item] | None:
+    """For a half-synthetic run (``data.synthetic``), the test fruit as the real loader gives them (real visits only,
+    the 4 tracked fruit through their first spoiled visit), restricted to the fruit the synthetic set keeps;
+    else ``None``."""
+    if not cfg.data.get("synthetic"):
+        return None
+    from omegaconf import OmegaConf
+
+    real_cfg = OmegaConf.merge(cfg.data, {"synthetic": None})
+    keep = set(test_ids) & {it.item_id for it in load_items(cfg.data)}
+    return [it for it in load_items(real_cfg) if it.item_id in keep]
 
 
 def splits_for(cfg: DictConfig, items: list[Item]) -> dict[str, list[str]]:
@@ -164,5 +189,6 @@ __all__ = [
     "model_cfg_dict",
     "n_obs_ablation",
     "select",
+    "real_test_items",
     "splits_for",
 ]
