@@ -14,7 +14,7 @@ import numpy as np
 import optax
 
 from ..data.collate import DatasetInfo, collate
-from ..data.schema import Item
+from ..data.schema import Item, all_starts, random_start
 
 
 @dataclass
@@ -30,6 +30,8 @@ class TrainConfig:
     seed: int = 0
     log_every: int = 1
     max_steps: int | None = None  # for smoke tests
+    random_start: bool = False  # each epoch, see every training item from a random visit on, time re-zeroed there
+    random_start_max: float = 6.0  # latest start, in days after the first visit (and never past spoil_lo)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -88,9 +90,12 @@ def train(
     history: list[dict] = []
     best, best_val, bad, n_steps = model, float("inf"), 0, 0
     t0 = time.time()
+    if cfg.random_start:  # early stopping on every start, so the chosen model is not the day-1-start one
+        val_items = all_starts(val_items, cfg.random_start_max)
     for epoch in range(cfg.epochs):
         tot, n = 0.0, 0
-        for batch in _batches(train_items, info, cfg.batch_size, rng, cfg.n_obs_mode, shuffle=True):
+        ep_items = random_start(train_items, cfg.random_start_max, rng) if cfg.random_start else train_items
+        for batch in _batches(ep_items, info, cfg.batch_size, rng, cfg.n_obs_mode, shuffle=True):
             key, sub = jax.random.split(key)
             model, opt_state, loss = step(model, opt_state, batch, sub)
             if not bool(jnp.isfinite(loss)):

@@ -147,3 +147,33 @@ also sees scans) against photo only: 3 methods × 20 = 60 more. Transformer late
 - Fitting on every observed visit is the best fill, but it only slightly beats carry-forward. The cut fruit's later
   photos are what make it work.
 - Step 4 should therefore use the linear fill fit on every visit, with carry-forward as the control arm.
+
+## In progress (2026-11-17)
+
+**Photo-fix reruns.** `scripts/run/rerun_photo_fix.sh` submitted 44 jobs:
+- the views study's photo and photo + scanner runs (3 seeds);
+- the AML ladder in `outputs/a2sl_schedule` (5 seeds).
+
+The stale runs are kept in `outputs/_superseded_photo_key_bug_2026-11-17/`.
+
+**Step 4, filled-in data** (`src/ripen/data/a2sl_fill.py`, config `data.fill=linear|carry`).
+
+One consequence of the day-rule labels: the loader stops every fruit at its first spoiled visit, which is day 9. So
+days 11 and 13 are never used, and filling only completes:
+- the cut fruit avo04–07 forward to day 9;
+- with `fill_backward`, the late starters avo12–15 back to day 1.
+
+Each fold has only about 4 of these 8 fruit among its training fruit. Only training fruit are filled, from a fill
+fit on the training fruit, so test scores still come from real visits.
+
+**Step 5, random start** (`train.random_start`, helpers `shift_start` / `all_starts` in `ripen.data.schema`).
+- Each epoch, every training fruit is seen from a random visit at most 6 days after its first visit, with time
+  re-zeroed there.
+- Early stopping uses every start of the validation fruit.
+- `data.eval_all_starts` scores each test fruit from every start (`avo01@k`).
+
+**Step 6, grid.** `scripts/run/submit_fill_rs.sh` submits:
+- a gated smoke job;
+- 16 grid jobs: latent ODE / SDE × {photo × fill none / linear / carry, date only} × start fixed / random, each
+  5 seeds × 4 folds;
+- the summary job, `scripts/analysis/a2sl_fill_rs_summary.py`, written to `outputs/a2sl_fill_rs/summary.md`.

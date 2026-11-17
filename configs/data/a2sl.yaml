@@ -13,3 +13,9 @@ include_pilot: false                               # add the 6 daily pilot avoca
 photo_dim: 512
 subsample_every: 1
 subsample_offset: 0
+# fill-in + random start (docs/plans/2026-11-17_a2sl-imputation-random-start.md); training fruit only
+fill: null                                         # null | linear (shared slope + per-fruit offset) | carry (control)
+fill_k: 4                                          # PCA components for the photo fill
+fill_backward: true                                # also fill late starters (avo12-15) back to day 1
+fill_copies: 1                                     # >1: noisy copies <id>#c of every filled fruit (multiple imputation)
+eval_all_starts: false                             # also score each test fruit from every later start (<id>@k)

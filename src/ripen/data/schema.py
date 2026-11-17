@@ -158,3 +158,41 @@ def subsample_visits(item: Item, every: int, offset: int = 0) -> Item:
     hi = float(item.visits[k].t + (k_next - k) * dt)
     meta["subsample"]["hi_extrapolated"] = True
     return replace(item, visits=out, spoil_lo=out[-1].t, spoil_hi=hi, meta=meta)
+
+
+# ---- random start: the model sees a fruit from some visit on, with time re-zeroed there ----------------------
+
+
+def shift_start(item: Item, k: int) -> Item:
+    """``item`` seen from its ``k``-th visit on, with time re-zeroed there, so the model never sees how long the fruit
+    was stored before. ``k`` must leave at least one visit before the spoilage interval (``t_k <= spoil_lo``)."""
+    if k == 0:
+        return item
+    t0 = item.visits[k].t
+    if t0 > item.spoil_lo + 1e-9:
+        raise ValueError(f"start visit {k} of {item.item_id} is past its last unspoiled visit")
+    vs = [replace(v, t=v.t - t0) for v in item.visits[k:]]
+    return replace(item, visits=vs, spoil_lo=item.spoil_lo - t0, spoil_hi=item.spoil_hi - t0,
+                               meta={**item.meta, "start_shift": t0})  # fmt: skip
+
+
+def start_choices(item: Item, max_shift: float) -> list[int]:
+    """Visit indices a random start may begin at: on or before the last unspoiled visit, at most ``max_shift`` days
+    after the first visit."""
+    return [i for i, v in enumerate(item.visits) if v.t <= min(item.spoil_lo, max_shift) + 1e-9]
+
+
+def random_start(items: list[Item], max_shift: float, rng: np.random.Generator) -> list[Item]:
+    """Every item from a random allowed start (``start_choices``); used once per training epoch."""
+    return [shift_start(it, int(rng.choice(start_choices(it, max_shift)))) for it in items]
+
+
+def all_starts(items: list[Item], max_shift: float) -> list[Item]:
+    """Every item from every allowed start; a shifted copy is named ``<id>@<k>`` (``k`` = first visit kept), so the
+    unshifted original keeps its id and scores exactly as before."""
+    out = []
+    for it in items:
+        for k in start_choices(it, max_shift):
+            sh = shift_start(it, k)
+            out.append(sh if k == 0 else replace(sh, item_id=f"{it.item_id}@{k}"))
+    return out

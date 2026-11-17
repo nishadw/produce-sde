@@ -7,3 +7,5 @@ patience: 10
 n_obs_mode: random      # random: resample the visible prefix every epoch (photo dropout) | all
 log_every: 1
 max_steps: null
+random_start: false     # each epoch, every training fruit from a random visit on, time re-zeroed (A2SL plan step 5)
+random_start_max: 6.0   # latest start, days after the first visit

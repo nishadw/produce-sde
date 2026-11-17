@@ -14,6 +14,7 @@ import hydra
 import jax
 from omegaconf import DictConfig, OmegaConf
 
+from ripen.data.schema import all_starts
 from ripen.models import build_model
 from ripen.pipeline import (
     dataset_info,
@@ -35,7 +36,18 @@ def main(cfg: DictConfig) -> None:
     items = load_items(cfg.data)
     sp = splits_for(cfg, items)
     tr, va, te = select(items, sp["train"]), select(items, sp["val"]), select(items, sp["test"])
-    info = dataset_info(items)
+    if cfg.data.get("fill"):  # fit on, and fill, the training fruit only: val / test stay real
+        from ripen.data.a2sl_fill import fill_items
+
+        d = cfg.data
+        tr = fill_items(tr, d.fill, photo_dim=int(d.get("photo_dim", 512)), k=int(d.fill_k),
+                        backward=bool(d.fill_backward), copies=int(d.fill_copies), seed=int(cfg.seed))  # fmt: skip
+        n_fill = sum(len(it.meta.get("filled_days", ())) for it in tr if "#" not in it.item_id)
+        print(f"fill={cfg.data.fill}: {n_fill} visits filled over {len(tr)} training items")
+    if cfg.data.get("eval_all_starts"):
+        te = all_starts(te, float(cfg.train.get("random_start_max", 6.0)))
+    info = dataset_info(items)  # from the real items, so fill / start shifts do not move the clock's initial rate
+    assert max(it.n_visits for it in tr + va + te) <= info.max_visits
     (out / "info.json").write_text(json.dumps(info.to_dict(), indent=2))
     print(f"{cfg.data.name}: {len(tr)}/{len(va)}/{len(te)} items, groups {info.groups}, feat_dim {info.feat_dim}")
     key = jax.random.PRNGKey(int(cfg.seed))
