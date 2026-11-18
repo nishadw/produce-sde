@@ -157,7 +157,9 @@ for meth in ("ours_rkd", "samd_paired"):
     for b in ("01", "1", "10"):
         for lr in ("3e4", "1e3", "3e3"):
             run = f"latent_sde_{meth}_b{b}_lr{lr}_view{V}"
-            vals = [json.loads(p.read_text())["overall"]["nll"] for p in AML.glob(f"seed*/{run}/fold*/metrics_val.json")]
+            vals = [
+                json.loads(p.read_text())["overall"]["nll"] for p in AML.glob(f"seed*/{run}/fold*/metrics_val.json")
+            ]
             t = avo(AML, run)
             if vals and t:
                 rows.append({"run": run, "beta": {"01": 0.1, "1": 1, "10": 10}[b], "lr": float(lr.replace("e", "e-")),

@@ -79,8 +79,14 @@ table(
     [
         ["Files changed", "80 of 297 tracked files"],
         ["Rounds", "5: one builder pass (5 agents), three verify-and-fix rounds, one convergence check"],
-        ["Bugs that change results", "1: photo-every-2nd/3rd-day runs (fixed and rerun; the sparse-photo win goes away)"],
-        ["Bugs with no effect on past results", "3: a clock flag that was ignored, a rerun-script edge case, 2 weak tests"],
+        [
+            "Bugs that change results",
+            "1: photo-every-2nd/3rd-day runs (fixed and rerun; the sparse-photo win goes away)",
+        ],
+        [
+            "Bugs with no effect on past results",
+            "3: a clock flag that was ignored, a rerun-script edge case, 2 weak tests",
+        ],
         ["Wrong statements fixed", "dozens in reports, docs and the brief (numbers, method descriptions, paths)"],
         ["Checked and correct", "all core math (PDE solver, bridge factors, Girsanov KL, metrics), all copied tables"],
     ],
@@ -97,13 +103,22 @@ doc.add_paragraph(
 )
 bullets(
     [
-        ("Affected: ", "the every-2nd/3rd-day rows of the 28 Oct avocado study (Round 1, Round 2b, new baselines, "
-         "paired tests) and the README headline 'latent SDE CRPS 0.97 at a photo every 3rd day'."),
-        ("Done: ", "old runs moved to outputs/_superseded_subsample_bug_2026-11-14/ (kept, not deleted); rerun on "
-         "15 Nov (bash run_umiacs.sh sparse, 30 jobs) plus the paired tests; tables, figure and text updated."),
-        ("What changed: ", "the latent SDE is no longer the clear winner with sparse photos. Every 3rd day its CRPS is "
-         "1.30 (was 0.97), tied with GRU-D (1.27) and the transformer (1.20); it still beats the Wiener process. "
-         "Every 2nd day the transformer is significantly better. All 65 spoiling test fruit now count at every rate."),
+        (
+            "Affected: ",
+            "the every-2nd/3rd-day rows of the 28 Oct avocado study (Round 1, Round 2b, new baselines, "
+            "paired tests) and the README headline 'latent SDE CRPS 0.97 at a photo every 3rd day'.",
+        ),
+        (
+            "Done: ",
+            "old runs moved to outputs/_superseded_subsample_bug_2026-11-14/ (kept, not deleted); rerun on "
+            "15 Nov (bash run_umiacs.sh sparse, 30 jobs) plus the paired tests; tables, figure and text updated.",
+        ),
+        (
+            "What changed: ",
+            "the latent SDE is no longer the clear winner with sparse photos. Every 3rd day its CRPS is "
+            "1.30 (was 0.97), tied with GRU-D (1.27) and the transformer (1.20); it still beats the Wiener process. "
+            "Every 2nd day the transformer is significantly better. All 65 spoiling test fruit now count at every rate.",
+        ),
     ]
 )
 
@@ -111,32 +126,53 @@ doc.add_heading("2. Corrections to the professor brief", level=2)
 table(
     ["Was", "Now", "Why"],
     [
-        ["SAMD and the lab method share the teacher's final layer", "share the whole predictor (every layer after the "
-         "encoder)", "samd.share_predictor copies drift, noise, readout, head and clock"],
-        ["Rebuilt-teacher students are less over-confident", "they are sharper: 80 % range 3.7 → 2.4 days, more "
-         "probability on the spoilage window, but the middle guess moves further off", "measured in outputs/a2sl_schedule"],
+        [
+            "SAMD and the lab method share the teacher's final layer",
+            "share the whole predictor (every layer after the encoder)",
+            "samd.share_predictor copies drift, noise, readout, head and clock",
+        ],
+        [
+            "Rebuilt-teacher students are less over-confident",
+            "they are sharper: 80 % range 3.7 → 2.4 days, more "
+            "probability on the spoilage window, but the middle guess moves further off",
+            "measured in outputs/a2sl_schedule",
+        ],
         ["Latent SDE gives 'more honest' ranges", "wider ranges", "both models' 80 % ranges already cover every fruit"],
         ["Scanner = 0/120/240° views", "views for avocados; all five antenna spacings for mangoes", "mango inputs"],
-        ["All methods ported from RepDistiller", "SAMD follows Shen et al.; KD, RKD and the lab method are ported",
-         "SAMD was built from the paper"],
+        [
+            "All methods ported from RepDistiller",
+            "SAMD follows Shen et al.; KD, RKD and the lab method are ported",
+            "SAMD was built from the paper",
+        ],
     ],
     [2.1, 2.6, 2.1],
 )
-note("Still 2 pages. The other four Word reports got similar fixes (e.g. a 'lower is better' score described backwards).")
+note(
+    "Still 2 pages. The other four Word reports got similar fixes (e.g. a 'lower is better' score described backwards)."
+)
 
 doc.add_heading("3. Other fixes, by area", level=2)
 table(
     ["Area", "Examples"],
     [
-        ["Study write-ups", "C-index/Cox/gamma values mismatched to tables; 'recalibration lowers CRPS 2–5 %' (really "
-         "0–8 %); '30 mangoes cut' (36); a broken table; teacher-phase 'wider' (sharper)"],
+        [
+            "Study write-ups",
+            "C-index/Cox/gamma values mismatched to tables; 'recalibration lowers CRPS 2–5 %' (really "
+            "0–8 %); '30 mangoes cut' (36); a broken table; teacher-phase 'wider' (sharper)",
+        ],
         ["README", "Word reports now built into ../results (outside git); --local flag on a stage that rejects it"],
-        ["Code", "ArrheniusClock ignored learn_rate_ref=False (never used, so no result changes); ~10 docstrings "
-         "that disagreed with the code"],
+        [
+            "Code",
+            "ArrheniusClock ignored learn_rate_ref=False (never used, so no result changes); ~10 docstrings "
+            "that disagreed with the code",
+        ],
         ["Tests", "two 'hidden visits must not leak' tests skipped the first hidden visit"],
         ["Run scripts", "--local summaries tried to sbatch; dead doc paths; CPU cap comment (32, not 16)"],
-        ["Theory / foundations", "prior missing √κ on the noise; test tolerances misquoted; foundations scripts wrote "
-         "to a folder that does not exist; figure licence CC BY 4.0 (not 3.0), also in the lecture deck"],
+        [
+            "Theory / foundations",
+            "prior missing √κ on the noise; test tolerances misquoted; foundations scripts wrote "
+            "to a folder that does not exist; figure licence CC BY 4.0 (not 3.0), also in the lecture deck",
+        ],
     ],
     [1.5, 5.3],
 )
@@ -152,8 +188,11 @@ doc.add_paragraph(
 doc.add_heading("5. Open questions for you", level=2)
 bullets(
     [
-        ("Paper wording: ", "the properness result we cite (Yanagisawa & Akiyama) may be stated under a "
-         "'constant-sum condition', not 'independent monitoring'; check the theorem."),
+        (
+            "Paper wording: ",
+            "the properness result we cite (Yanagisawa & Akiyama) may be stated under a "
+            "'constant-sum condition', not 'independent monitoring'; check the theorem.",
+        ),
         ("Data naming: ", "some files call the lab avocado set 'A2SL / Stevens', others 'University of Alabama'."),
     ]
 )

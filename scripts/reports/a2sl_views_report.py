@@ -91,8 +91,6 @@ def caption(text):
     para(text, size=8.5, color=GREY, italic=True, after=4)
 
 
-
-
 def v(key, metric, recal=False, fmt="{:.2f}"):
     return fmt.format(N["views"][key + ("_recal" if recal else "")][metric][0])
 

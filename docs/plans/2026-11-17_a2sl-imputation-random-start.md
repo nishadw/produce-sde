@@ -246,3 +246,25 @@ Real visits, all starts (lower is better). Both models are deterministic, so the
   (MAE about 1.2 vs 1.6 for the population forecast and 1.9 for the latent SDE).
 - Weibull with fixed start fits the synthetic curve almost exactly, becomes near-deterministic and misses the real
   visits (score near the 1e-6 floor). Random start rescues it (1.8–2.3).
+
+## The no-photo forecast as the bar: paired tests and blending (2026-11-18, `outputs/a2sl_pop_compare/summary.md`)
+
+`scripts/analysis/a2sl_pop_compare.py`. Real visits of the 4 tracked fruit, random-start training, every start day
+weighted equally (same numbers as the summary tables, which now carry the no-photo forecast as a reference row).
+Paired by forecast, seed-mean first, bootstrap over the 4 fruit.
+
+| A vs B | A − B | 95 % CI (fruit) | fruit A better |
+|---|---|---|---|
+| matching, logistic fill vs no-photo (1.17) | −0.24 | [−0.35, −0.06] | 3/4 (avo01 +0.03) |
+| matching, linear fill vs no-photo | +0.24 | [−0.19, +0.80] | 1/4 |
+| latent SDE + SAMD vs no-photo | +0.29 | [+0.18, +0.40] | 0/4 |
+| latent SDE vs no-photo | +0.46 | [+0.34, +0.57] | 0/4 |
+| matching, logistic vs latent SDE + SAMD | −0.53 | [−0.75, −0.28] | 4/4 |
+| latent SDE + SAMD vs latent SDE | −0.17 | [−0.33, −0.02] | 3/4 |
+
+- Over the looser fruit × start bootstrap, matching vs no-photo is not significant ([−0.61, +0.25]); the others keep
+  their sign.
+- Blend `(1 − w) F + w F_pop`, w chosen on each fold's validation fruit: w = 1 for every latent run (so the blend is
+  the no-photo forecast). On the test fruit the score falls monotonically in w for every latent and Weibull run, best
+  at w = 1: the latent models add no information beyond the date here, so it is not only over-confidence.
+- Brief: `../results/2026-11-18_half-synthetic-vs-no-photo.docx` (`scripts/reports/synth_figs.py`, `synth_report.py`).
