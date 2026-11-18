@@ -227,3 +227,22 @@ fix (13d8836).
 - On the latent ODE, distillation of any kind helps (3.3 → 2.6–2.9), with or without the scanner. The ODE is
   over-confident under random start, and a teacher's forecast softens it.
 - The scanner teacher vs the photo-only teacher differs by at most about 0.1 everywhere, so the scanner adds little.
+
+## Weibull AFT and temporal matching on the grid (2026-11-17, `outputs/a2sl_synth_rs/summary.md`)
+
+Real visits, all starts (lower is better). Both models are deterministic, so the 5 seeds are identical.
+
+| Model / input | Fixed start | Random start |
+|---|---|---|
+| matching, date only (= population forecast) | 1.17 | 1.17 |
+| matching, photo, linear / logistic fill | 1.75 / 1.56 | 1.42 / **0.93** |
+| Weibull, photo, linear / logistic fill | 12.44 / 11.28 | 2.27 / 1.83 |
+| latent SDE, photo (best neural, for reference) | 3.66 | 1.63 |
+
+- Matching with no photo has nothing to match on, so it gives every library visit equal weight: the population
+  distribution of days left. That alone (1.17) beats every latent ODE / SDE run, SAMD included (best 1.46). The
+  neural models are over-confident on 4 fruit.
+- Matching on photos beats it only with the logistic fill under random start (0.93), but it has the best day error
+  (MAE about 1.2 vs 1.6 for the population forecast and 1.9 for the latent SDE).
+- Weibull with fixed start fits the synthetic curve almost exactly, becomes near-deterministic and misses the real
+  visits (score near the 1e-6 floor). Random start rescues it (1.8–2.3).
