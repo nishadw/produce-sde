@@ -30,6 +30,7 @@ RS, AML = Path("outputs/a2sl_synth_rs"), Path("outputs/a2sl_synth_aml")
 POP = (RS, "matching_time_synth-linear_start-random")
 OUT = Path("outputs/a2sl_pop_compare")
 W_GRID = np.round(np.arange(0, 1.0001, 0.05), 2)
+CURVE = np.round(np.arange(0, 1.0001, 0.1), 1)
 
 # label -> (root holding seed*/, run)
 RUNS = {
@@ -83,8 +84,11 @@ def mix(z: dict, ref: dict, w: float) -> tuple[np.ndarray, np.ndarray]:
     return F, ok
 
 
-def per_forecast(label: str, blend: bool = False) -> tuple[dict[str, tuple[str, int, float, float]], list[float]]:
-    """key -> (fruit, start, seed-mean log score, seed-mean |median error|) on tracked real visits; chosen w's."""
+def per_forecast(label: str, blend: bool = False, fixed_w: float | None = None) -> tuple[dict, list[float]]:
+    """key -> (fruit, start, seed-mean log score, seed-mean |median error|) on tracked real visits; chosen w's.
+
+    ``blend``: w chosen on validation; ``fixed_w``: one w everywhere (the test-score curve, a diagnostic only)."""
+    blend = blend or fixed_w is not None
     root, run = RUNS[label]
     acc: dict[str, list] = defaultdict(list)
     ws = []
@@ -102,7 +106,7 @@ def per_forecast(label: str, blend: bool = False) -> tuple[dict[str, tuple[str, 
                 if not ok.any():
                     raise RuntimeError(f"no val overlap {fd} vs {pfd}")
                 vs.append(np.mean(censored_log_score(Fv[ok], v["lo"][ok], v["hi"][ok])))
-            w = float(W_GRID[int(np.argmin(vs))])
+            w = float(W_GRID[int(np.argmin(vs))]) if fixed_w is None else fixed_w
             ws.append(w)
             F, ok = mix(z, load(pfd / "predictions_test_real.npz"), w)
             if not ok.all():
@@ -120,15 +124,22 @@ def per_forecast(label: str, blend: bool = False) -> tuple[dict[str, tuple[str, 
     }, ws
 
 
-def boot(d: np.ndarray, cl: np.ndarray, n: int = 10000, seed: int = 0) -> tuple[float, float, float]:
-    """Cluster bootstrap of the mean of ``d``: (lo, hi, share of resamples on the other side of 0)."""
+def start_weights(starts: np.ndarray) -> np.ndarray:
+    """Each start day counts equally (as in a2sl_synth_rs_summary's "all starts"), however many forecasts it has."""
+    u, inv, cnt = np.unique(starts, return_inverse=True, return_counts=True)
+    return 1.0 / cnt[inv]
+
+
+def boot(d: np.ndarray, wt: np.ndarray, cl: np.ndarray, n: int = 10000, seed: int = 0) -> tuple[float, float, float]:
+    """Cluster bootstrap of the weighted mean of ``d``: (lo, hi, share of resamples on the other side of 0)."""
     u, inv = np.unique(cl, return_inverse=True)
-    s, c = np.bincount(inv, d, len(u)), np.bincount(inv, minlength=len(u)).astype(float)
+    s, c = np.bincount(inv, wt * d, len(u)), np.bincount(inv, wt, len(u))
     r = np.random.default_rng(seed).integers(0, len(u), (n, len(u)))
     W = np.stack([np.bincount(x, minlength=len(u)) for x in r])
     b = (W @ s) / (W @ c)
     lo, hi = np.percentile(b, [2.5, 97.5])
-    return float(lo), float(hi), float(np.mean(b >= 0) if d.mean() < 0 else np.mean(b <= 0))
+    m = np.sum(wt * d) / np.sum(wt)
+    return float(lo), float(hi), float(np.mean(b >= 0) if m < 0 else np.mean(b <= 0))
 
 
 def compare(a: dict, b: dict) -> dict:
@@ -136,16 +147,21 @@ def compare(a: dict, b: dict) -> dict:
     d = np.array([a[k][2] - b[k][2] for k in ks])
     fruit = np.array([a[k][0] for k in ks])
     fs = np.array([f"{a[k][0]}@{a[k][1]}" for k in ks])
-    per_fruit = {f: float(d[fruit == f].mean()) for f in np.unique(fruit)}
-    lo_f, hi_f, p_f = boot(d, fruit)
-    lo_c, hi_c, p_c = boot(d, fs)
-    return {"n": len(ks), "diff": float(d.mean()), "fruit_ci": [lo_f, hi_f, p_f], "cluster_ci": [lo_c, hi_c, p_c],
-            "wins": int(sum(v < 0 for v in per_fruit.values())), "per_fruit": per_fruit}  # fmt: skip
+    wt = start_weights(np.array([a[k][1] for k in ks]))
+    per_fruit = {f: float(np.average(d[fruit == f], weights=wt[fruit == f])) for f in np.unique(fruit)}
+    lo_f, hi_f, p_f = boot(d, wt, fruit)
+    lo_c, hi_c, p_c = boot(d, wt, fs)
+    return {"n": len(ks), "diff": float(np.average(d, weights=wt)), "fruit_ci": [lo_f, hi_f, p_f],
+            "cluster_ci": [lo_c, hi_c, p_c], "wins": int(sum(v < 0 for v in per_fruit.values())),
+            "per_fruit": per_fruit}  # fmt: skip
 
 
 def summary(pf: dict) -> tuple[float, float]:
     v = list(pf.values())
-    return float(np.mean([t[2] for t in v])), float(np.nanmean([t[3] for t in v]))
+    wt = start_weights(np.array([t[1] for t in v]))
+    lg, e = np.array([t[2] for t in v]), np.array([t[3] for t in v])
+    ok = ~np.isnan(e)
+    return float(np.average(lg, weights=wt)), float(np.average(e[ok], weights=wt[ok]))
 
 
 def main() -> None:
@@ -155,10 +171,11 @@ def main() -> None:
         pf[lab], _ = per_forecast(lab)
     for lab in BLEND:
         pf[f"blend: {lab}"], ws[lab] = per_forecast(lab, blend=True)
+    curve = {lab: {f"{w:.1f}": summary(per_forecast(lab, fixed_w=float(w))[0])[0] for w in CURVE} for lab in BLEND}
     ref = summary(pf["No-photo forecast"])[0]
     md = ["Half-synthetic A2SL, real visits of the 4 tracked fruit, random-start training, every start day scored. "
-          "Log score lower is better (mean over forecasts, seed-mean first). Blend weight w on the no-photo "
-          "forecast is chosen on each fold's validation fruit.", "",
+          "Log score lower is better (seed-mean per forecast, then each start day weighted equally). "
+          "Blend weight w on the no-photo forecast is chosen on each fold's validation fruit.", "",
           "## Scores", "",
           "| model | log score | vs no-photo | day error | blended log score | blended day error | w (median, range) |",
           "|---|---|---|---|---|---|---|"]  # fmt: skip
@@ -190,6 +207,13 @@ def main() -> None:
         out["pairs"].append({"a": a, "b": b, **r})
     md += ["", "* = the 95 % interval excludes 0. With 4 fruit, the fruit bootstrap can exclude 0 only when all 4 "
            "fruit move the same way."]  # fmt: skip
+    md += ["", "## Diagnostic: test score of the blend at a fixed w (uses the test fruit; not a valid score)", "",
+           "| model | " + " | ".join(f"w={w:.1f}" for w in CURVE) + " | best w |",
+           "|---|" + "---|" * (len(CURVE) + 1)]  # fmt: skip
+    for lab, c in curve.items():
+        best = min(c, key=c.get)
+        md.append(f"| {lab} | " + " | ".join(f"{v:.2f}" for v in c.values()) + f" | {best} ({c[best]:.2f}) |")
+    out["curve"] = curve
     text = "\n".join(md) + "\n"
     (OUT / "summary.md").write_text(text)
     (OUT / "summary.json").write_text(json.dumps(out, indent=1))
