@@ -161,22 +161,13 @@ para(
     color=GREY,
 )
 doc.add_heading("In short", level=1)
-bullet(
-    " 240° for the latent SDE (the only single view that beats a date-only model significantly). For the latent ODE "
-    "every view helps and all six are within 0.05 of each other, so no view stands out.",
-    lead="Best view:",
-)
-bullet(
-    " for the latent ODE, photo alone is as good as photo + the 0°/120°/240° views, so the scanner adds nothing "
-    "on top of photos. The latent ODE beats the latent SDE on almost every input.",
-    lead="Best input:",
-)
-bullet(
-    " SAMD and the lab method improve the photo-only model, but a control that never sees the scanner improves it "
-    "just as much. The gain comes from the take-turns training, not from the scanner. CAML-style KD is no better "
-    "than photo only.",
-    lead="AML:",
-)
+bullet(" 240° for the latent SDE (the only single view that beats a date-only model significantly). For the latent ODE "
+       "every view helps and all six are within 0.05 of each other, so no view stands out.", lead="Best view:")
+bullet(" for the latent ODE, photo alone is as good as photo + the 0°/120°/240° views, so the scanner adds nothing "
+       "on top of photos. The latent ODE beats the latent SDE on almost every input.", lead="Best input:")
+bullet(" SAMD and the lab method improve the photo-only model, but a control that never sees the scanner improves it "
+       "just as much. The gain comes from the take-turns training, not from the scanner. CAML-style KD is no better "
+       "than photo only.", lead="AML:")
 
 # ----------------------------------------------------------------------------------------------------- views
 doc.add_heading("1. One model per scanner view", level=1)

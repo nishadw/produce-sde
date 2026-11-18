@@ -80,15 +80,8 @@ fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.7), sharey=True)
 for ax, (m, lab) in zip(axes, MODELS.items(), strict=True):
     rows = [OLD["avo"][f"{m}_mw_{v}"]["log"] for v in VIEWS]
     best = int(np.argmin([r[0] for r in rows]))
-    ax.bar(
-        range(6),
-        [r[0] for r in rows],
-        0.6,
-        yerr=[r[1] for r in rows],
-        capsize=2,
-        color=[BLUE if i == best else LIGHT for i in range(6)],
-        error_kw={"lw": 0.7, "color": "#333"},
-    )
+    ax.bar(range(6), [r[0] for r in rows], 0.6, yerr=[r[1] for r in rows], capsize=2,
+           color=[BLUE if i == best else LIGHT for i in range(6)], error_kw={"lw": 0.7, "color": "#333"})
     for i, r in enumerate(rows):
         ax.text(i, 0.52, f"{r[0]:.2f}", ha="center", va="bottom", fontsize=7, color="white" if i == best else "#333")
     for key, ls, txt in (("time", "--", "date only"), ("photo", ":", "photo only")):
