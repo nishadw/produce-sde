@@ -482,8 +482,10 @@ class LatentDynamics(eqx.Module):
         return loss
 
     # ----- prediction ----------------------------------------------------------------------------------------------
-    def predict_cdf(self, batch: Batch, key: Array) -> Array:
-        """``[B, horizon + 1]`` CDF of days-left from the last visible visit."""
+    def predict_cdf(self, batch: Batch, key: Array, smooth: bool = False) -> Array:
+        """``[B, horizon + 1]`` CDF of days-left from the last visible visit. ``smooth`` (mc only) uses the training
+        loss's sigmoid crossing (``fpt_beta``) instead of the hard indicator, so the forecast has a gradient: a loss
+        on the forecast itself (distillation) needs it, because the hard indicator's gradient is zero everywhere."""
         M = self.n_samples
         z_path, _, _, kappa = self._posterior_paths(batch, key, M)
         r_path = z_path @ self.readout_w + self.readout_b  # [M, B, T]
@@ -496,7 +498,7 @@ class LatentDynamics(eqx.Module):
             surv = lookup(S, r_grid, self.pde_ds, s_q, jnp.broadcast_to(r_now[..., None], s_q.shape))
             return 1.0 - jnp.mean(surv, axis=0)
         rm = jax.vmap(jax.vmap(running_max_from), in_axes=(0, None))(r_path, idx_now)  # [M, B, T]
-        crossed = crossing_prob(rm, self.head.boundary, None)
+        crossed = crossing_prob(rm, self.head.boundary, self.fpt_beta if smooth else None)
         q_idx = jnp.clip(idx_now[:, None] + jnp.round(h[None, :] * self.n_sub).astype(jnp.int32), 0, self.n_steps)
         return jnp.mean(jnp.take_along_axis(crossed, q_idx[None], axis=2), axis=0)
 

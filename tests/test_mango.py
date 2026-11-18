@@ -141,3 +141,26 @@ def test_rep_loss_gradients_are_finite():
     for kind in REPS:
         g = jax.grad(lambda x, kind=kind: rep_loss(kind, x, t))(f)
         assert bool(jax.numpy.all(jax.numpy.isfinite(g))), kind
+
+
+@pytest.mark.parametrize("name", ["latent_ode", "latent_sde"])
+def test_kd_loss_moves_the_student(name):
+    """Forecast distillation must have a gradient. The latent ODE's hard Monte Carlo crossing has none, which once
+    made CAML-style KD a no-op for it."""
+    import equinox as eqx
+
+    from ripen.train.aml import forecast, kd_loss
+
+    rng = np.random.default_rng(0)
+    items = _items(rng.normal(size=(6, 4)))
+    info = dataset_info(items)
+    cfg = {"name": name, "horizon": 6, "use_stages": False, "n_samples": 8}
+    if name == "latent_sde":
+        cfg["pde_steps"] = 400
+    student = build_model(cfg, info, jax.random.PRNGKey(1))
+    teacher = build_model(cfg, info, jax.random.PRNGKey(2))
+    b, key = collate(items, info, n_obs="all"), jax.random.PRNGKey(3)
+    F_t = forecast(teacher, b, key)
+    g = eqx.filter_grad(lambda m: kd_loss(forecast(m, b, key), F_t, 4.0))(student)
+    total = sum(float(np.abs(x).sum()) for x in jax.tree_util.tree_leaves(eqx.filter(g, eqx.is_inexact_array)))
+    assert np.isfinite(total) and total > 1e-6

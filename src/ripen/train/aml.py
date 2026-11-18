@@ -147,9 +147,14 @@ def rep_loss(kind: str, fs: jax.Array, ft: jax.Array, w: jax.Array | None = None
     raise ValueError(kind)
 
 
+def forecast(model, batch, key):
+    """The forecast a distillation loss compares: differentiable for the Monte Carlo latent ODE (``smooth``)."""
+    return model.predict_cdf(batch, key, smooth=True) if hasattr(model, "fpt_beta") else model.predict_cdf(batch, key)
+
+
 def teacher_targets(spec: DistillSpec, teacher, tb, key):
     """Frozen teacher outputs the objective needs: (forecast CDF or None, features or None)."""
-    F_t = jax.lax.stop_gradient(teacher.predict_cdf(tb, key)) if spec.alpha > 0 else None
+    F_t = jax.lax.stop_gradient(forecast(teacher, tb, key)) if spec.alpha > 0 else None
     f_t = jax.lax.stop_gradient(features(teacher, tb)) if spec.beta > 0 else None
     return F_t, f_t
 
@@ -160,7 +165,7 @@ def student_objective(spec: DistillSpec, mm, sb, F_t, f_t, key, w=None):
     task = mm.loss(sb, k1)
     out = spec.gamma * task
     if spec.alpha > 0:
-        out = out + spec.alpha * kd_loss(mm.predict_cdf(sb, k2), F_t, spec.temp, w)
+        out = out + spec.alpha * kd_loss(forecast(mm, sb, k2), F_t, spec.temp, w)
     if spec.beta > 0:
         out = out + spec.beta * rep_loss(spec.rep, features(mm, sb), f_t, w)
     return out, task
