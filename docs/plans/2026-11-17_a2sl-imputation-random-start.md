@@ -208,3 +208,22 @@ mean ± std over 5 seeds.
   when it does not know the fruit's age.
 - **Linear and logistic fills give the same results.** Real and synthetic test scores are nearly identical,
   because the labels come from the day rule and do not depend on the photos.
+
+## CAML / SAMD results with random start (2026-11-17, `outputs/a2sl_synth_aml/<synth>/summary.md`)
+
+Real visits, all starts, mean over 5 seeds (lower is better). The latent ODE KD rows were rerun after the KD-gradient
+fix (13d8836).
+
+| Method | SDE linear | SDE logistic | ODE linear | ODE logistic |
+|---|---|---|---|---|
+| Photo only | 1.62 | 1.62 | 3.32 | 3.20 |
+| Teacher (photo + 6 views) | 1.74 | 1.70 | 3.54 | 3.55 |
+| CAML-KD, scanner teacher | 1.81 | 1.78 | 2.57 | 2.55 |
+| CAML-KD, photo-only teacher | 1.74 | 1.92 | 2.67 | 2.66 |
+| SAMD, scanner teacher | 1.46 | 1.53 | 2.75 | 2.89 |
+| SAMD, photo-only teacher | 1.51 | 1.56 | 2.88 | 2.83 |
+
+- On the latent SDE, SAMD is the only method that beats photo only; CAML-KD is slightly worse.
+- On the latent ODE, distillation of any kind helps (3.3 → 2.6–2.9), with or without the scanner. The ODE is
+  over-confident under random start, and a teacher's forecast softens it.
+- The scanner teacher vs the photo-only teacher differs by at most about 0.1 everywhere, so the scanner adds little.
