@@ -30,10 +30,9 @@ ax.bar(range(len(y)), y, 0.6, color=[BLUE if v < ref else LIGHT for v in y])
 for i, v in enumerate(y):
     ax.text(i, v + 0.04, f"{v:.2f}", ha="center", va="bottom", fontsize=7.5)
 ax.axhline(ref, color=DARK, lw=1, ls="--")
-ax.text(len(y) - 0.45, ref + 0.05, f"no-photo forecast {ref:.2f}", fontsize=7.5, color=DARK, ha="right")
 ax.set_xticks(range(len(y)), [lab for _, lab in ROWS], fontsize=7.5)
 ax.set_ylim(0, max(y) * 1.15)
-ax.set_title("Score on the real visits, all start days (lower is better)", loc="left", fontsize=9.5,
+ax.set_title(f"Score on the real visits, all start days (lower is better); dashed = no-photo forecast {ref:.2f}", loc="left", fontsize=9.5,
              fontweight="bold")  # fmt: skip
 fig.tight_layout()
 fig.savefig(HERE / "sy_scores.png", dpi=200)
@@ -47,9 +46,9 @@ for k, lab, c in CUR:
     cv = S["curve"][k]
     ax.plot([float(w) for w in cv], list(cv.values()), color=c, lw=2, marker="o", ms=4, label=lab)
 ax.axhline(ref, color=DARK, lw=1, ls="--")
-ax.text(0.02, ref - 0.07, "no-photo forecast", fontsize=7.5, color=DARK)
+ax.text(0.02, ref - 0.13, "no-photo forecast", fontsize=7.5, color=DARK)
 ax.set_xlabel("Weight on the no-photo forecast (0 = model alone, 1 = no-photo forecast alone)", fontsize=8)
-ax.set_ylim(1.0, 2.0)
+ax.set_ylim(1.0, 3.0)
 ax.legend(fontsize=7.5, loc="upper right")
 ax.set_title("Blending a latent model with the no-photo forecast", loc="left", fontsize=9.5, fontweight="bold")
 fig.tight_layout()
