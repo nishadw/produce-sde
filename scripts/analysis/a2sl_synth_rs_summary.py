@@ -20,6 +20,9 @@ import numpy as np
 from ripen.eval.metrics import censored_log_score, compute_metrics
 
 TRACKED = ("avo01", "avo02", "avo03", "avo11")
+# reference row in every table: temporal matching on the date alone = "how many days fruit usually have left"
+REF_ROOT, REF_RUN = Path("outputs/a2sl_synth_rs"), "matching_time_synth-linear_start-random"
+REF_NAME = "**reference: no-photo forecast**"
 
 
 def split_id(i: str) -> tuple[str, int]:
@@ -57,7 +60,9 @@ def main() -> None:
         if t:
             md += [f"## {title} (predictions_{split})", "", t, ""]
             out[split] = j
-    text = "Censored log score (lower is better) of the 4 tracked fruit, by start; mean ± std over seeds.\n\n"
+    text = "Censored log score (lower is better) of the 4 tracked fruit, by start; mean ± std over seeds. "
+    text += "The reference row is the no-photo forecast (matching on the date alone); a model that cannot beat it is "
+    text += "not using the photos usefully.\n\n"
     text += "\n".join(md)
     (root / "summary.md").write_text(text)
     (root / "summary.json").write_text(json.dumps(out, indent=1))
@@ -66,17 +71,16 @@ def main() -> None:
 
 def table(root: Path, split: str) -> tuple[str, dict]:
     res: dict[str, dict[int, list]] = defaultdict(lambda: defaultdict(list))
-    for sd in sorted(root.glob("seed*")):
-        for rd in sorted(p for p in sd.iterdir() if p.is_dir()):
-            z = pooled(rd, split)
-            if z is None:
-                continue
-            sc = scores(z)
-            for k, v in sc.items():
-                res[rd.name][k].append(v)
-            res[rd.name][-1].append(
-                (float(np.mean([v[0] for v in sc.values()])), float(np.mean([v[1] for v in sc.values()])))
-            )
+    dirs = [(rd.name, rd) for sd in sorted(root.glob("seed*")) for rd in sorted(p for p in sd.iterdir() if p.is_dir())]
+    dirs += [(REF_NAME, rd) for rd in sorted(REF_ROOT.glob(f"seed*/{REF_RUN}"))]
+    for name, rd in dirs:
+        z = pooled(rd, split)
+        if z is None:
+            continue
+        sc = scores(z)
+        for k, v in sc.items():
+            res[name][k].append(v)
+        res[name][-1].append((float(np.mean([v[0] for v in sc.values()])), float(np.mean([v[1] for v in sc.values()]))))
     if not res:
         return "", {}
     starts = sorted({k for r in res.values() for k in r if k >= 0})
@@ -88,7 +92,7 @@ def table(root: Path, split: str) -> tuple[str, dict]:
         return "—" if len(x) == 0 else f"{x.mean():.2f} ± {x.std(ddof=1) if len(x) > 1 else 0:.2f}"
 
     out = {}
-    for run, r in sorted(res.items()):
+    for run, r in sorted(res.items(), key=lambda kv: (kv[0] != REF_NAME, kv[0])):
         lines.append("| " + " | ".join([run, str(len(r[-1])), cell(r[-1])] + [cell(r.get(k, [])) for k in starts]
                                         + [cell(r[-1], 1)]) + " |")  # fmt: skip
         out[run] = {str(k): [list(t) for t in v] for k, v in r.items()}
