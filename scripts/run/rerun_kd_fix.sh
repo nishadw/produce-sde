@@ -2,7 +2,8 @@
 # Reruns after the KD-gradient fix (2026-11-17): the latent ODE's hard Monte Carlo forecast had zero gradient, so
 # every latent ODE arm with forecast KD trained as if alpha were 0. The latent SDE (PDE forecast) was unaffected.
 # Brief (outputs/a2sl_schedule): kd, ours, ours_rkd. Half-synthetic (outputs/a2sl_synth_aml): kd, kd_photoT.
-# Then the two half-synthetic summaries. From a frozen snapshot of HEAD.
+# Then the two half-synthetic summaries. From a frozen snapshot of HEAD. a2sl_aml.py skips finished folds, so
+# delete the old run directories first (done by hand on 2026-11-17).
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 source scripts/run/_snap.sh
