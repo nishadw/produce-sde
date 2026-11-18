@@ -7,6 +7,7 @@ import dataclasses
 import jax
 
 from ..data.collate import DatasetInfo
+from .classical import TemporalMatching, WeibullAFT
 from .latent import LatentDynamics
 from .sequence import SequenceSurvival
 
@@ -44,6 +45,18 @@ MODEL_REGISTRY = {
     "transformer": _seq("transformer"),
     "latent_ode": _latent("ode"),
     "latent_sde": _latent("sde"),
+    # fit directly (model.fit), not by the gradient loop
+    "weibull": lambda cfg, info, key: WeibullAFT(
+        info.feat_dim, cfg["horizon"], cfg.get("pca", 4), cfg.get("ridge", 1.0)
+    ),
+    "matching": lambda cfg, info, key: TemporalMatching(
+        info.feat_dim,
+        cfg["horizon"],
+        cfg.get("pca", 8),
+        cfg.get("k_visits", 3),
+        cfg.get("tol", 1.01),
+        cfg.get("eps", 0.05),
+    ),
 }
 
 

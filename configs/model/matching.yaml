@@ -1,0 +1,7 @@
+# Temporal image matching (ripen.models.classical.TemporalMatching): analog forecast from aligned training visits.
+name: matching
+horizon: ${horizon}
+pca: 8        # photos compared in this many PCA components of the training photos
+k_visits: 3   # match the last this many visible photos, aligned by their time gaps
+tol: 1.01     # a library visit within this many days of a gap counts as matched
+eps: 0.05     # weight of the unweighted anchor mixture (keeps every forecast proper)

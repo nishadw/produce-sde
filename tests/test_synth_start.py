@@ -2,6 +2,7 @@
 
 import math
 
+import jax
 import numpy as np
 import pytest
 from test_a2sl import _write_fake_manifests
@@ -69,3 +70,40 @@ def test_paired_random_start_shifts_student_and_teacher_alike():
     s2, t2 = paired_random_start(stu, tea, 6.0, np.random.default_rng(1))
     assert [x.visits[0].features[0, 0] for x in s2] == [x.visits[0].features[0, 0] for x in t2]
     assert len({x.n_visits for x in s2}) > 1  # the starts do vary
+
+
+def _spoiling_items(n=6, seed=0):
+    """Fruit that each age at their own pace: the photo is (age, noise), spoilage at age 8, visits every 2 days."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for i in range(n):
+        age0 = float(rng.uniform(0, 4))
+        vs = [Visit(t, 5 if age0 + t >= 8 else 1, features=np.array([[age0 + t, rng.normal()]], np.float32))
+              for t in (0.0, 2.0, 4.0, 6.0, 8.0, 10.0)]  # fmt: skip
+        from ripen.data.schema import spoil_interval_from_visits
+
+        lo, hi = spoil_interval_from_visits(vs)
+        out.append(Item(f"f{i}", "avocado", "ambient", math.nan, vs, lo, hi, meta={"label_source": "jmw2026"}))
+    return out
+
+
+@pytest.mark.parametrize("name", ["weibull", "matching"])
+def test_fit_directly_models_forecast_properly(name):
+    from types import SimpleNamespace
+
+    from ripen.data.collate import collate, dataset_info
+    from ripen.models import build_model
+
+    tr, va = _spoiling_items(6, 0), _spoiling_items(2, 1)
+    info = dataset_info(tr + va)
+    m = build_model({"name": name, "horizon": 12}, info, jax.random.PRNGKey(0))
+    m = m.fit(tr, va, info, SimpleNamespace(random_start=True, random_start_max=6.0))
+    b = collate(va, info, n_obs=[1, 3])
+    F = np.asarray(m.predict_cdf(b, jax.random.PRNGKey(1)))
+    assert F.shape == (2, 13) and np.all(np.isfinite(F))
+    assert np.all(np.diff(F, axis=1) >= -1e-6) and F.min() >= 0 and F.max() <= 1 + 1e-6
+    # an older-looking fruit should be forecast to spoil sooner (median days left)
+    old = collate([va[0]], info, n_obs=[3])
+    young = collate([va[0]], info, n_obs=[1])
+    med = lambda bb: int(np.argmax(np.asarray(m.predict_cdf(bb, jax.random.PRNGKey(1)))[0] >= 0.5))  # noqa: E731
+    assert med(old) <= med(young)

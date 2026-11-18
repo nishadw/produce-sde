@@ -1,7 +1,9 @@
-"""Models: the latent ODE / SDE and the transformer. Each is an :class:`eqx.Module` with ``loss(batch, key)`` and
+"""Models: the latent ODE / SDE, the transformer, and two fit-directly baselines (Weibull AFT, temporal
+matching). Each is an :class:`eqx.Module` with ``loss(batch, key)`` and
 ``predict_cdf(batch, key)``."""
 
 from .base import ShelfLifeModel
+from .classical import TemporalMatching, WeibullAFT
 from .clock import ArrheniusClock, FixedClock, GroupClock, make_clock
 from .latent import LatentDynamics
 from .registry import MODEL_REGISTRY, build_model
@@ -14,6 +16,8 @@ __all__ = [
     "LatentDynamics",
     "MODEL_REGISTRY",
     "SequenceSurvival",
+    "TemporalMatching",
+    "WeibullAFT",
     "ShelfLifeModel",
     "build_model",
     "make_clock",

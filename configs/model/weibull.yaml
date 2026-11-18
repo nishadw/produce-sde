@@ -1,0 +1,5 @@
+# Weibull accelerated-failure-time baseline (ripen.models.classical.WeibullAFT), fit by maximum likelihood.
+name: weibull
+horizon: ${horizon}
+pca: 4        # last visible photo -> this many PCA components of the training photos
+ridge: 1.0    # L2 penalty on the covariate coefficients

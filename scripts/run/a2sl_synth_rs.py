@@ -19,6 +19,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, N_FOLDS, fold_path, write_folds  # noqa: E402
 
+# the two fit-directly baselines (ripen.models.classical) take no extra arguments
+MODEL_ARGS = {**MODEL_ARGS, "weibull": ["model=weibull"], "matching": ["model=matching"]}
+HIDDEN_ARGS = {**HIDDEN_ARGS, "weibull": [], "matching": []}
+
 ROOT = Path(__file__).resolve().parents[2]
 INPUTS = {"photo": ["data.scans_file=null"], "time": ["data.features_file=null", "data.scans_file=null"]}
 

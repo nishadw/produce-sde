@@ -49,7 +49,10 @@ def main(cfg: DictConfig) -> None:
     k_model, k_train, k_eval = jax.random.split(key, 3)
     model = build_model(model_cfg_dict(cfg), info, k_model)
     tcfg = TrainConfig(**OmegaConf.to_container(cfg.train, resolve=True))
-    model, _ = train(model, tr, va, info, tcfg, k_train, out_dir=out)
+    if hasattr(model, "fit"):  # Weibull AFT / temporal matching: fit directly, no gradient loop
+        model = model.fit(tr, va, info, tcfg)
+    else:
+        model, _ = train(model, tr, va, info, tcfg, k_train, out_dir=out)
     k1, k2, k3 = jax.random.split(k_eval, 3)
     m_test = evaluate_and_write(model, te, info, cfg, out, k1, tag="test")
     evaluate_and_write(model, va, info, cfg, out, k2, tag="val")

@@ -1,4 +1,5 @@
-"""Every model in the registry: builds, has a finite loss and gradient, and predicts a valid CDF."""
+"""Every model in the registry: builds, has a finite loss and gradient, and predicts a valid CDF. Models fit directly
+(``fit``: Weibull AFT, temporal matching) need not have a gradient."""
 
 import equinox as eqx
 import jax
@@ -28,8 +29,10 @@ def test_model_one_batch(name, synthetic_info, batch):
     loss, grads = eqx.filter_value_and_grad(lambda m: m.loss(batch, jax.random.PRNGKey(1)))(model)
     assert np.isfinite(float(loss))
     leaves = jax.tree.leaves(eqx.filter(grads, eqx.is_inexact_array))
-    assert leaves and all(bool(jnp.all(jnp.isfinite(g))) for g in leaves)
-    assert any(bool(jnp.any(g != 0)) for g in leaves), "no parameter received gradient"
+    assert all(bool(jnp.all(jnp.isfinite(g))) for g in leaves)
+    if not hasattr(model, "fit"):
+        assert leaves
+        assert any(bool(jnp.any(g != 0)) for g in leaves), "no parameter received gradient"
     F = np.asarray(model.predict_cdf(batch, jax.random.PRNGKey(2)))
     assert F.shape == (batch.batch_size, HORIZON + 1)
     assert (F >= -1e-6).all() and (F <= 1 + 1e-6).all()
