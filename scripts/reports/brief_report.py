@@ -155,17 +155,19 @@ para(
     "(2) can AML / CAML teach a photo-only model from a teacher that also sees the scanner. Data: 4 avocados "
     "photographed and scanned every other day until they spoiled, each held out in turn. Score = log score (lower is "
     "better): how little probability the forecast gave to the two-day window in which the fruit spoiled. "
-    "* = significantly better than the comparison (95 % paired bootstrap).",
+    "* = significantly different from the comparison (95 % paired bootstrap; the sign says which way). Corrected 17 Nov 2026: every photo result "
+    "was rerun after a bug that gave each visit the fruit's last photo.",
     size=8.5,
     color=GREY,
 )
 doc.add_heading("In short", level=1)
 bullet(" 240° for the latent SDE (the only single view that beats a date-only model significantly). For the latent ODE "
        "every view helps and all six are within 0.05 of each other, so no view stands out.", lead="Best view:")
-bullet(" photo + the 0°/120°/240° views is the best input for the latent ODE, but photo alone is close behind. "
-       "The latent ODE beats the latent SDE on almost every input.", lead="Best input:")
+bullet(" for the latent ODE, photo alone is as good as photo + the 0°/120°/240° views, so the scanner adds nothing "
+       "on top of photos. The latent ODE beats the latent SDE on almost every input.", lead="Best input:")
 bullet(" SAMD and the lab method improve the photo-only model, but a control that never sees the scanner improves it "
-       "just as much. The gain comes from the take-turns training, not from the scanner.", lead="AML:")
+       "just as much. The gain comes from the take-turns training, not from the scanner. CAML-style KD is slightly "
+       "worse than photo only.", lead="AML:")
 
 # ----------------------------------------------------------------------------------------------------- views
 doc.add_heading("1. One model per scanner view", level=1)
@@ -180,7 +182,7 @@ ROWS = [("Date only (no images)", "time"), ("Photo only", "photo")] + [(f"Scanne
         ("Scanner, all 6 views", "mw_all"), ("Photo + scanner 0°/120°/240°", "photo_mw_0+120+240")]  # fmt: skip
 table(["Input (* = beats date only)", "Latent ODE score", "Latent SDE score"],
       [[lab, view("latent_ode", k), view("latent_sde", k)] for lab, k in ROWS], [2.6, 1.4, 1.4],
-      highlight=(10,))  # fmt: skip
+      highlight=(1, 10))  # fmt: skip
 picture("br_views.png", 6.4)
 bullet(
     f" every view beats date only ({view('latent_ode', 'time')}), but they span only "
@@ -197,7 +199,7 @@ bullet(
 )
 bullet(
     f" combining all six views is no better than the best single view, and photo + scanner "
-    f"({f2(V['latent_ode_photo_mw_0+120+240']['log'][0])} ODE) is only a little better than photo alone "
+    f"({f2(V['latent_ode_photo_mw_0+120+240']['log'][0])} ODE) is no better than photo alone "
     f"({f2(V['latent_ode_photo']['log'][0])}). All 4 fruit spoiled on day 7–9 of a fixed schedule, so the date "
     "already pins spoilage to about a day; images can only refine that.",
     lead="Why the differences are small:",
@@ -225,7 +227,8 @@ table(["Method", "What it does", "Score", "vs photo only", "Day error"],
 picture("br_aml.png", 5.8)
 bullet(
     f" with the scanner the teacher scores {f2(ode_aml('teacher'))} against {f2(ode_aml('photo'))} for photo only, "
-    f"not a significant gain, so there is little to pass on. CAML-style KD matches photo only ({f2(ode_aml('kd'))}).",
+    f"not a significant gain, so there is little to pass on. CAML-style KD is slightly worse than photo only "
+    f"({f2(ode_aml('kd'))}).",
     lead="The scanner adds little, even to the teacher:",
 )
 bullet(
