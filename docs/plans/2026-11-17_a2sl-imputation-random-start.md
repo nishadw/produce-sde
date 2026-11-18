@@ -182,3 +182,29 @@ about as far from the real ones as one real day-5 → 7 change. Logistic is abou
 
 The 4 photo-fix reruns that had failed (two of them because the code was edited mid-run) were resubmitted from a
 snapshot.
+
+## Grid results (2026-11-17, `outputs/a2sl_synth_rs/summary.md`)
+
+Censored log score on the tracked fruit's **real** visits, averaged over start days 1, 3, 5 and 7. Lower is better;
+mean ± std over 5 seeds.
+
+| Model / input | Fixed start | Random start |
+|---|---|---|
+| latent ODE, date only | 4.93 ± 0.62 | 3.38 ± 1.56 |
+| latent ODE, photo, linear fill | 5.30 ± 1.31 | 2.88 ± 0.76 |
+| latent ODE, photo, logistic fill | 5.32 ± 1.32 | 2.73 ± 0.86 |
+| latent SDE, date only | 3.62 ± 0.83 | 1.84 ± 0.13 |
+| latent SDE, photo, linear fill | 3.87 ± 0.91 | **1.63 ± 0.14** |
+| latent SDE, photo, logistic fill | 3.66 ± 0.75 | 1.64 ± 0.13 |
+
+- **Fixed-start models learned the calendar.** They score about 0.8 from day 1 but 9–12 from day 7, which is
+  nearly zero probability on the true window. This confirms the premise: the date-only model does as well as the
+  photo models.
+- **Random start fixes most of that,** roughly halving the all-starts score. The cost is the day-1 start
+  (0.8 → about 1.8).
+- **Under random start, photos beat date only:** latent SDE 1.63 vs 1.84, latent ODE 2.7–2.9 vs 3.4. This is
+  the first sign that the model reads ripeness from the photo. There is no paired bootstrap yet, and only 4 fruit.
+- **Under random start, the latent SDE clearly beats the latent ODE** (1.6 vs 2.8). The ODE is over-confident
+  when it does not know the fruit's age.
+- **Linear and logistic fills give the same results.** Real and synthetic test scores are nearly identical,
+  because the labels come from the day rule and do not depend on the photos.
