@@ -13,10 +13,10 @@ for m in matching weibull; do
 done
 for s in 1 2 3 4 5; do
   for m in latent_ode latent_sde transformer; do
-    for i in photo time; do ids+=("$(sub "all-$m-$i-s$s" "$G --model $m --input $i --seeds $s" -t 24:00:00)"); done
-    for me in teacher kd samd; do ids+=("$(sub "alla-$m-$me-s$s" "$A --model $m --method $me --seeds $s" -t 24:00:00)"); done
+    for i in photo time; do ids+=("$(sub "all-$m-$i-s$s" "$G --model $m --input $i --seeds $s" -t 2:30:00)"); done
+    for me in teacher kd samd; do ids+=("$(sub "alla-$m-$me-s$s" "$A --model $m --method $me --seeds $s" -t 2:30:00)"); done
     for me in kd samd; do
-      ids+=("$(sub "alla-$m-${me}_photoT-s$s" "$A --model $m --method $me --teacher-photo-only --tag _photoT --seeds $s" -t 24:00:00)")
+      ids+=("$(sub "alla-$m-${me}_photoT-s$s" "$A --model $m --method $me --teacher-photo-only --tag _photoT --seeds $s" -t 2:30:00)")
     done
   done
 done
