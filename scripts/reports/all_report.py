@@ -150,7 +150,12 @@ better = [r for r in usable if word(r) == "better"]
 best = min(usable, key=lambda r: r["obs"])
 neural = [r for r in usable if r["model"] in ("Latent ODE", "Latent SDE", "Transformer")]
 best_nn = min(neural, key=lambda r: r["obs"]) if neural else None
-blend_gain = [r for r in usable if r.get("blend") is not None and r["blend"] < REF - 0.005]
+blend_gain = [r for r in usable if r.get("blend") is not None and r["blend"] < REF - 0.02]
+MATCH = get("Image matching")
+LOSSES = sorted(MATCH["vs"]["per_fruit"].items(), key=lambda kv: -kv[1])
+LOSSES = [(f, d) for f, d in LOSSES if d > 0]
+TCURVE = S["curve"].get("Transformer, photo", {})
+TBEST = min(TCURVE.items(), key=lambda kv: kv[1]) if TCURVE else None
 
 # =====================================================================================================================
 doc.add_paragraph("Avocado Spoilage: All 15 Avocados, Real Photos Only", style="Title")
@@ -178,9 +183,16 @@ if best_nn is not None:
     bullet(f" best is {best_nn['model']} ({best_nn['sees']}, {best_nn['obs']:.2f}: {word(best_nn)}). Photo only: "
            f"latent ODE {sc('Latent ODE')}, latent SDE {sc('Latent SDE')}, transformer {sc('Transformer')}.",
            lead="Neural models:")  # fmt: skip
-bullet(f" image matching {sc('Image matching')}, Weibull {sc('Weibull')} (photo); Weibull on the date alone "
-       f"{sc('Weibull', 'date only')}.", lead="Simple models:")  # fmt: skip
-bullet(" " + (f"mixing with the no-photo forecast beats it for {', '.join(r['model'] + ' (' + r['sees'] + ')' for r in blend_gain)}."
+bullet(f" better than the no-photo forecast on {MATCH['vs']['wins']} of 8 fruit, but much worse on "
+       + " and ".join(f"{f} (+{d:.2f})" for f, d in LOSSES[:2])
+       + f", so overall {sc('Image matching')}: {word(MATCH)}. Its day error is the lowest of any model "
+       f"({MATCH['mae']:.1f} d vs {get('No-photo forecast', 'date only')['mae']:.1f} d).",
+       lead="Image matching is closest:")  # fmt: skip
+bullet(f" Weibull {sc('Weibull')} (photo), {sc('Weibull', 'date only')} (date only).", lead="Weibull:")  # fmt: skip
+bullet(" " + ("mixed with the no-photo forecast (mix chosen on validation fruit), "
+              + ", ".join(f"{r['model']} ({r['sees']}) reaches {r['blend']:.2f}" for r in blend_gain)
+              + f" against {REF:.2f}: a small gain, not tested for significance. Every other model's best mix is the "
+              "no-photo forecast alone."
               if blend_gain else "mixing any model with the no-photo forecast, the mix chosen on validation fruit, "
               "never beats the no-photo forecast."), lead="Blending:")  # fmt: skip
 
@@ -204,6 +216,12 @@ doc.add_heading("3. Can a model be rescued by blending?", level=1)
 para("Each forecast is mixed with the no-photo forecast. The chart scores every mix on the test fruit, to show "
      "whether any mix could help; the table's blend uses the mix chosen on validation fruit.", size=9.5)  # fmt: skip
 picture("al_blend.png", 6.4)
+if TBEST is not None and TBEST[1] < REF - 0.02:
+    bullet(f" a {float(TBEST[0]) * 100:.0f} % no-photo mix reaches {TBEST[1]:.2f} on the test fruit, but validation "
+           "fruit picked almost 100 % no-photo, so this mix could not have been found without looking at the test "
+           "fruit. A hint that the photo carries a little signal, not a usable model.",
+           lead="Transformer, photo:")  # fmt: skip
+bullet(" the latent ODE and SDE curves fall all the way to the no-photo forecast alone.", lead="Latent models:")
 
 doc.add_heading("Caveats", level=1)
 bullet(" labels follow the day rule (day 9 = spoiled), so every fruit spoils between day 7 and 9. More fruit give "

@@ -35,3 +35,16 @@ the 8 fruit.
 
 ## Caveat
 Labels are the day rule, so every fruit spoils in (7, 9]: more fruit give more test cases, not fruit-to-fruit variation.
+
+## Results (2026-11-19, 109 runs, all completed)
+
+Full table: `outputs/a2sl_all_compare/summary.md`; brief: `../results/2026-11-19_all-avocados-real-photos.docx`.
+Score on the 8 observed fruit (no-photo forecast 1.15; all 12 fruit: 0.98).
+
+- **Nothing is clearly better than the no-photo forecast.** Closest: image matching 1.23 (no clear difference;
+  better on 6 of 8 fruit but +1.82 on avo08 and +0.82 on avo11; lowest day error, 0.9 d vs 1.5 d).
+- Weibull 1.41 photo / 1.30 date only. Transformer 1.34 photo (worse, 3 of 8), latent SDE 1.58, latent ODE 2.75.
+- Teachers (CAML-KD, SAMD) never beat their photo-only model by enough to matter; the best are latent SDE + SAMD 1.52
+  and transformer + CAML-KD 1.51. Transformer + SAMD trained this time (1.79) but is still worse.
+- Blend chosen on validation: Weibull photo reaches 1.10 (untested); every other model's mix goes to w ≈ 1.
+  The test-scored curve for the transformer (photo) dips to 1.11 at w = 0.7, which validation did not find.
