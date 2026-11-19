@@ -3,14 +3,18 @@
 The no-photo forecast is temporal matching on the date alone (``matching_time``): every training fruit weighted
 equally, i.e. "how many days fruit usually have left" at this start day. It is deterministic, so one seed suffices.
 
-1. Paired tests. Per forecast (tracked fruit, start, visible prefix) the censored log score is averaged over seeds,
-   paired by forecast between two runs, and the mean difference A - B is bootstrapped over the 4 tracked fruit
+1. Paired tests against the no-photo forecast. Per forecast (tracked fruit, start, visible prefix) the censored log
+   score is averaged over seeds, paired by forecast, and the mean difference A - B is bootstrapped over the 4 fruit
    (the forecasts of one fruit are correlated) and, as a looser check, over the 16 fruit x start clusters.
    ``wins`` = fruit on which A scores lower. With 4 fruit the fruit bootstrap has only 35 distinct resamples, so a
    "significant" difference there means all 4 fruit agree.
 2. Blend. ``(1 - w) F + w F_pop``, with ``w`` chosen per seed and fold on that fold's validation forecasts (never the
    test fruit), from 0, 0.05, ..., 1. If over-confidence is the whole problem, the blended model should reach or
    beat the no-photo forecast; if it stays above, the model's ranking of fruit is also off.
+
+Output: one table per fill (linear, logistic), rows grouped as reference / date only / photo / taught by a teacher,
+with fixed- and random-start scores, the paired test against the no-photo forecast and the blend; then the blend
+curve diagnostic. Runs that do not exist yet are left out.
 
 python scripts/analysis/a2sl_pop_compare.py   -> outputs/a2sl_pop_compare/{summary.md,summary.json}
 """
@@ -32,37 +36,39 @@ OUT = Path("outputs/a2sl_pop_compare")
 W_GRID = np.round(np.arange(0, 1.0001, 0.05), 2)
 CURVE = np.round(np.arange(0, 1.0001, 0.1), 1)
 
-# label -> (root holding seed*/, run)
-RUNS = {
-    "No-photo forecast": POP,
-    "Matching, photo (logistic fill)": (RS, "matching_photo_synth-logistic_start-random"),
-    "Matching, photo (linear fill)": (RS, "matching_photo_synth-linear_start-random"),
-    "Weibull, photo (logistic fill)": (RS, "weibull_photo_synth-logistic_start-random"),
-    "Weibull, photo (linear fill)": (RS, "weibull_photo_synth-linear_start-random"),
-    "Weibull, date only": (RS, "weibull_time_synth-linear_start-random"),
-    "Latent SDE, photo (linear)": (RS, "latent_sde_photo_synth-linear_start-random"),
-    "Latent SDE, photo (logistic)": (RS, "latent_sde_photo_synth-logistic_start-random"),
-    "Latent SDE, date only": (RS, "latent_sde_time_synth-linear_start-random"),
-    "Latent ODE, photo (linear)": (RS, "latent_ode_photo_synth-linear_start-random"),
-    "Latent ODE, photo (logistic)": (RS, "latent_ode_photo_synth-logistic_start-random"),
-    "Latent SDE + SAMD (linear)": (AML / "linear", "latent_sde_samd_viewall"),
-    "Latent SDE + SAMD (logistic)": (AML / "logistic", "latent_sde_samd_viewall"),
-    "Latent SDE + CAML-KD (linear)": (AML / "linear", "latent_sde_kd_viewall"),
-    "Latent ODE + CAML-KD (linear)": (AML / "linear", "latent_ode_kd_viewall"),
-    "Latent ODE + SAMD (linear)": (AML / "linear", "latent_ode_samd_viewall"),
-}
-BLEND = [k for k in RUNS if k.startswith(("Latent", "Weibull, photo"))]
-PAIRS = [
-    ("Matching, photo (logistic fill)", "No-photo forecast"),
-    ("Matching, photo (linear fill)", "No-photo forecast"),
-    ("Latent SDE + SAMD (linear)", "No-photo forecast"),
-    ("Latent SDE, photo (linear)", "No-photo forecast"),
-    ("Matching, photo (logistic fill)", "Latent SDE + SAMD (linear)"),
-    ("Latent SDE + SAMD (linear)", "Latent SDE, photo (linear)"),
-    ("blend: Latent SDE + SAMD (linear)", "No-photo forecast"),
-    ("blend: Latent SDE, photo (linear)", "No-photo forecast"),
-    ("Matching, photo (logistic fill)", "blend: Latent SDE + SAMD (linear)"),
-]
+FILLS = ("linear", "logistic")
+MODELS = {"matching": "Image matching", "weibull": "Weibull", "latent_ode": "Latent ODE", "latent_sde": "Latent SDE",
+          "transformer": "Transformer"}  # fmt: skip
+TAUGHT = ("latent_ode", "latent_sde", "transformer")  # CAML-KD / SAMD only on the gradient-trained models
+METHODS = {"kd": "CAML-KD, teacher sees photo + scanner", "kd_photoT": "CAML-KD, teacher sees photo only",
+           "samd": "SAMD, teacher sees photo + scanner", "samd_photoT": "SAMD, teacher sees photo only",
+           "teacher": "the teacher itself (needs the scanner at test time)"}  # fmt: skip
+SECTIONS = ("Reference", "Date only (no images; the same in both tables)", "Photo",
+            "Photo-only model taught by a teacher during training (random start only)")  # fmt: skip
+CURVE_ROWS = [("linear", "Latent SDE", "SAMD, teacher sees photo + scanner"), ("linear", "Latent SDE", "photo"),
+              ("linear", "Latent ODE", "CAML-KD, teacher sees photo + scanner"), ("linear", "Transformer", "photo"),
+              ("linear", "Transformer", "SAMD, teacher sees photo + scanner")]  # fmt: skip
+
+
+def rows(fill: str) -> list[dict]:
+    """One table row = a model + what it sees, with its fixed-start and random-start runs (``None`` = not run)."""
+
+    def g(m, inp, st):
+        return (RS, f"{m}_{inp}_synth-{'linear' if inp == 'time' else fill}_start-{st}")
+
+    out = [{"section": SECTIONS[0], "model": "No-photo forecast", "sees": "date only", "fixed": POP, "random": POP}]
+    out += [{"section": SECTIONS[1], "model": lab, "sees": "date only", "fixed": g(m, "time", "fixed"),
+             "random": g(m, "time", "random")} for m, lab in MODELS.items() if m != "matching"]  # fmt: skip
+    out += [{"section": SECTIONS[2], "model": lab, "sees": "photo", "fixed": g(m, "photo", "fixed"),
+             "random": g(m, "photo", "random")} for m, lab in MODELS.items()]  # fmt: skip
+    out += [{"section": SECTIONS[3], "model": MODELS[m], "sees": d, "fixed": None,
+             "random": (AML / fill, f"{m}_{me}_viewall")} for m in TAUGHT for me, d in METHODS.items()]  # fmt: skip
+    return [r for r in out if complete(r["random"])]
+
+
+def complete(spec: tuple | None) -> bool:
+    """Every seed x fold of the run has its real-visit predictions (5 x 4; deterministic models count the same)."""
+    return spec is not None and len(list(spec[0].glob(f"seed*/{spec[1]}/fold*/predictions_test_real.npz"))) >= 20
 
 
 def key(z: dict, i: int) -> str:
@@ -84,12 +90,12 @@ def mix(z: dict, ref: dict, w: float) -> tuple[np.ndarray, np.ndarray]:
     return F, ok
 
 
-def per_forecast(label: str, blend: bool = False, fixed_w: float | None = None) -> tuple[dict, list[float]]:
+def per_forecast(spec: tuple, blend: bool = False, fixed_w: float | None = None) -> tuple[dict, list[float]]:
     """key -> (fruit, start, seed-mean log score, seed-mean |median error|) on tracked real visits; chosen w's.
 
     ``blend``: w chosen on validation; ``fixed_w``: one w everywhere (the test-score curve, a diagnostic only)."""
     blend = blend or fixed_w is not None
-    root, run = RUNS[label]
+    root, run = spec
     acc: dict[str, list] = defaultdict(list)
     ws = []
     for fd in sorted(root.glob(f"seed*/{run}/fold*")):
@@ -164,56 +170,62 @@ def summary(pf: dict) -> tuple[float, float]:
     return float(np.average(lg, weights=wt)), float(np.average(e[ok], weights=wt[ok]))
 
 
+def verdict(r: dict) -> str:
+    lo, hi = r["fruit_ci"][:2]
+    word = "better" if hi < 0 else "worse" if lo > 0 else "no clear difference"
+    return f"{r['diff']:+.2f} ({word})"
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    pf, ws = {}, {}
-    for lab in RUNS:
-        pf[lab], _ = per_forecast(lab)
-    for lab in BLEND:
-        pf[f"blend: {lab}"], ws[lab] = per_forecast(lab, blend=True)
-    curve = {lab: {f"{w:.1f}": summary(per_forecast(lab, fixed_w=float(w))[0])[0] for w in CURVE} for lab in BLEND}
-    ref = summary(pf["No-photo forecast"])[0]
-    md = ["Half-synthetic A2SL, real visits of the 4 tracked fruit, random-start training, every start day scored. "
-          "Log score lower is better (seed-mean per forecast, then each start day weighted equally). "
-          "Blend weight w on the no-photo forecast is chosen on each fold's validation fruit.", "",
-          "## Scores", "",
-          "| model | log score | vs no-photo | day error | blended log score | blended day error | w (median, range) |",
-          "|---|---|---|---|---|---|---|"]  # fmt: skip
-    out: dict = {"scores": {}, "pairs": []}
-    for lab in RUNS:
-        lg, mae = summary(pf[lab])
-        row = [lab, f"{lg:.2f}", f"{lg - ref:+.2f}", f"{mae:.2f}"]
-        rec = {"log": lg, "mae": mae}
-        if lab in BLEND:
-            blg, bmae = summary(pf[f"blend: {lab}"])
-            w = np.array(ws[lab])
-            row += [f"{blg:.2f}", f"{bmae:.2f}", f"{np.median(w):.2f} ({w.min():.2f}–{w.max():.2f})"]
-            rec |= {"blend_log": blg, "blend_mae": bmae, "w": ws[lab]}
-        else:
-            row += ["—", "—", "—"]
-        md.append("| " + " | ".join(row) + " |")
-        out["scores"][lab] = rec
-    md += ["", "## Paired differences (A - B; negative = A better)", "",
-           "| A | B | forecasts | A - B | 95 % CI by fruit | 95 % CI by fruit x start | fruit A wins | per fruit |",
-           "|---|---|---|---|---|---|---|---|"]  # fmt: skip
-    for a, b in PAIRS:
-        r = compare(pf[a], pf[b])
-        star = lambda ci: " *" if ci[0] > 0 or ci[1] < 0 else ""  # noqa: E731
-        md.append(
-            f"| {a} | {b} | {r['n']} | {r['diff']:+.2f} | [{r['fruit_ci'][0]:+.2f}, {r['fruit_ci'][1]:+.2f}]"
-            f"{star(r['fruit_ci'])} | [{r['cluster_ci'][0]:+.2f}, {r['cluster_ci'][1]:+.2f}]{star(r['cluster_ci'])}"
-            f" | {r['wins']}/4 | " + ", ".join(f"{f} {v:+.2f}" for f, v in r["per_fruit"].items()) + " |"
-        )
-        out["pairs"].append({"a": a, "b": b, **r})
-    md += ["", "* = the 95 % interval excludes 0. With 4 fruit, the fruit bootstrap can exclude 0 only when all 4 "
-           "fruit move the same way."]  # fmt: skip
-    md += ["", "## Diagnostic: test score of the blend at a fixed w (uses the test fruit; not a valid score)", "",
-           "| model | " + " | ".join(f"w={w:.1f}" for w in CURVE) + " | best w |",
-           "|---|" + "---|" * (len(CURVE) + 1)]  # fmt: skip
-    for lab, c in curve.items():
-        best = min(c, key=c.get)
-        md.append(f"| {lab} | " + " | ".join(f"{v:.2f}" for v in c.values()) + f" | {best} ({c[best]:.2f}) |")
-    out["curve"] = curve
+    pop = per_forecast(POP)[0]
+    ref = summary(pop)[0]
+    out: dict = {"ref": ref, "tables": {}, "curve": {}}
+    md = ["# Half-synthetic avocados: every model against the no-photo forecast", "",
+          "How to read: each number is the log score on the real photos of the 4 avocados tracked to spoilage, "
+          "averaged over every start day (lower is better). *Fixed start* = trained from day 1 only; *random start* "
+          "= trained from a random day (the setting we use). *vs no-photo* = random-start score minus the no-photo "
+          f"forecast ({ref:.2f}), with 'better' / 'worse' only when all 4 fruit agree (95 % bootstrap over fruit). "
+          "*Fruit better* = on how many of the 4 fruit the model beats the no-photo forecast. *Day error* = days "
+          "between the forecast's middle and the observed spoilage day (random start). *Blend* = the model mixed "
+          "with the no-photo forecast, the mix chosen on validation fruit (w = share of no-photo forecast).",
+          ""]  # fmt: skip
+    for fill in FILLS:
+        md += [f"## {fill.capitalize()} fill (days 7-15 extrapolated with a {fill} fit)", "",
+               "| Model | Sees | Fixed start | Random start | vs no-photo | Fruit better | Day error | Blend (w) |",
+               "|---|---|---|---|---|---|---|---|"]  # fmt: skip
+        tab, section = [], None
+        for r in rows(fill):
+            if r["section"] != section:
+                section = r["section"]
+                md.append(f"| **{section}** | | | | | | | |")
+            fx = summary(per_forecast(r["fixed"])[0])[0] if complete(r["fixed"]) else None
+            pf = per_forecast(r["random"])[0]
+            lg, mae = summary(pf)
+            rec = {k: r[k] for k in ("section", "model", "sees")} | {"fixed": fx, "random": lg, "mae": mae}
+            vs = wins = blend = "—"
+            if r["random"] != POP:
+                c = compare(pf, pop)
+                rec["vs"] = c
+                vs, wins = verdict(c), f"{c['wins']}/4"
+                if r["model"] not in ("Image matching",) and r["sees"] != "date only":
+                    bpf, ws = per_forecast(r["random"], blend=True)
+                    rec["blend"], rec["w"] = summary(bpf)[0], ws
+                    blend = f"{rec['blend']:.2f} ({np.median(ws):.2f})"
+            md.append(f"| {r['model']} | {r['sees']} | {'—' if fx is None else f'{fx:.2f}'} | {lg:.2f} | {vs} | "
+                      f"{wins} | {mae:.1f} d | {blend} |")  # fmt: skip
+            tab.append(rec)
+            if (fill, r["model"], r["sees"]) in CURVE_ROWS:
+                out["curve"][f"{r['model']}, {r['sees']}"] = {
+                    f"{w:.1f}": summary(per_forecast(r["random"], fixed_w=float(w))[0])[0] for w in CURVE
+                }
+        out["tables"][fill] = tab
+        md.append("")
+    md += ["## Diagnostic: blend scored on the test fruit at every w (not a valid score; shows whether any mix helps)",
+           "", "| Model (linear fill) | " + " | ".join(f"w={w:.1f}" for w in CURVE) + " |",
+           "|---|" + "---|" * len(CURVE)]  # fmt: skip
+    for lab, c in out["curve"].items():
+        md.append(f"| {lab} | " + " | ".join(f"{v:.2f}" for v in c.values()) + " |")
     text = "\n".join(md) + "\n"
     (OUT / "summary.md").write_text(text)
     (OUT / "summary.json").write_text(json.dumps(out, indent=1))
