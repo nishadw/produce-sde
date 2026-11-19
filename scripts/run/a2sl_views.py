@@ -32,6 +32,7 @@ N_FOLDS = len(TRACKED)
 MODEL_ARGS = {
     "latent_sde": ["model=latent_sde", "model.posterior_guidance=true", "model.event_mean=log_mean"],
     "latent_ode": ["model=latent_ode"],
+    "transformer": ["model=transformer"],
 }
 INPUT_ARGS = {
     "mw": ["data.features_file=null", "data.photo_dim=0"],
@@ -40,7 +41,7 @@ INPUT_ARGS = {
     "time": ["model.use_images=false"],  # labels hidden: no features at all (see main)
 }
 HIDDEN_ARGS = {"latent_sde": ["model.use_stages=false", "model.posterior_guidance=false"],
-               "latent_ode": ["model.use_stages=false"]}  # fmt: skip
+               "latent_ode": ["model.use_stages=false"], "transformer": ["model.use_stages=false"]}  # fmt: skip
 
 
 def fold_path(k: int) -> Path:
