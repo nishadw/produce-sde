@@ -168,10 +168,11 @@ doc.add_heading("In short", level=1)
 bullet(f" image matching with the logistic fill ({sc('logistic', 'Image matching')} vs {REF:.2f}, better on 3 of the "
        f"4 fruit). With the linear fill it is no better ({sc('linear', 'Image matching')}).",
        lead="Only one model beats the no-photo forecast:")  # fmt: skip
-bullet(f" photo only {sc('linear', 'Transformer')} (linear) / {sc('logistic', 'Transformer')} (logistic), date only "
-       f"{sc('linear', 'Transformer', 'date only')}, with SAMD {sc('linear', 'Transformer', SAMD)} / "
-       f"{sc('logistic', 'Transformer', SAMD)}. It is the closest of the neural models to the no-photo forecast, "
-       "but still slightly worse on every fruit.", lead="The transformer (new):")  # fmt: skip
+KDP = "CAML-KD, teacher sees photo only"
+bullet(f" photo only {sc('linear', 'Transformer')} (linear fill) / {sc('logistic', 'Transformer')} (logistic), "
+       f"date only {sc('linear', 'Transformer', 'date only')}, best with CAML-KD {sc('linear', 'Transformer', KDP)} / "
+       f"{sc('logistic', 'Transformer', KDP)}. The closest neural model to the no-photo forecast, but still slightly "
+       "worse on every fruit. With SAMD it did not train (see caveats).", lead="The transformer (new):")  # fmt: skip
 bullet(f" the best is the latent SDE with SAMD ({sc('linear', 'Latent SDE', SAMD)}). The latent ODE is far worse "
        f"({sc('linear', 'Latent ODE')}).", lead="Every latent ODE / SDE run is worse than the no-photo forecast:")  # fmt: skip
 bullet(" mixing any neural model with the no-photo forecast only helps, all the way to using the no-photo forecast "
@@ -211,6 +212,9 @@ doc.add_heading("Caveats and next steps", level=1)
 bullet(" 4 fruit, all spoiling on day 7–9, and days 7–15 of every photo series are filled in, not real.",
        lead="Small, partly synthetic data:")  # fmt: skip
 bullet(" matching and Weibull have no randomness, so their 5 repeats are identical.", lead="Deterministic models:")
+bullet(" its validation score got worse from the first round on, so early stopping kept an almost untrained model "
+       "(a flat forecast, about 6 days off). Those two runs are left out; SAMD would need a gentler setting (fewer "
+       "epochs per round or a lower learning rate) for the transformer.", lead="Transformer + SAMD did not train:")  # fmt: skip
 bullet(" real photos past day 5, per-fruit labels from the lab, and more fruit with varied spoilage days.",
        lead="What would settle it:")  # fmt: skip
 

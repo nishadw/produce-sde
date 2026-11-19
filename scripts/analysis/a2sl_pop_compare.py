@@ -45,9 +45,12 @@ METHODS = {"kd": "CAML-KD, teacher sees photo + scanner", "kd_photoT": "CAML-KD,
            "teacher": "the teacher itself (needs the scanner at test time)"}  # fmt: skip
 SECTIONS = ("Reference", "Date only (no images; the same in both tables)", "Photo",
             "Photo-only model taught by a teacher during training (random start only)")  # fmt: skip
+# runs that stopped at a nearly untrained model (val loss rose from the first SAMD round on, so early stopping kept
+# the first epoch; flat forecast, day error ~6 d): left out of the tables and named in the brief's caveats
+NOT_TRAINED = {"transformer_samd_viewall", "transformer_samd_photoT_viewall"}
 CURVE_ROWS = [("linear", "Latent SDE", "SAMD, teacher sees photo + scanner"), ("linear", "Latent SDE", "photo"),
               ("linear", "Latent ODE", "CAML-KD, teacher sees photo + scanner"), ("linear", "Transformer", "photo"),
-              ("linear", "Transformer", "SAMD, teacher sees photo + scanner")]  # fmt: skip
+              ("linear", "Transformer", "CAML-KD, teacher sees photo only")]  # fmt: skip
 
 
 def rows(fill: str) -> list[dict]:
@@ -63,7 +66,7 @@ def rows(fill: str) -> list[dict]:
              "random": g(m, "photo", "random")} for m, lab in MODELS.items()]  # fmt: skip
     out += [{"section": SECTIONS[3], "model": MODELS[m], "sees": d, "fixed": None,
              "random": (AML / fill, f"{m}_{me}_viewall")} for m in TAUGHT for me, d in METHODS.items()]  # fmt: skip
-    return [r for r in out if complete(r["random"])]
+    return [r for r in out if complete(r["random"]) and r["random"][1] not in NOT_TRAINED]
 
 
 def complete(spec: tuple | None) -> bool:

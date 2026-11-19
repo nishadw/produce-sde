@@ -33,7 +33,7 @@ SAMD = "SAMD, teacher sees photo + scanner"
 BARS = [("Image matching", "photo", "Image\nmatching"), ("Weibull", "photo", "Weibull"),
         ("Latent ODE", "photo", "Latent ODE"), ("Latent SDE", "photo", "Latent SDE"),
         ("Latent SDE", SAMD, "Latent SDE\n+ SAMD"), ("Transformer", "photo", "Transformer"),
-        ("Transformer", SAMD, "Transformer\n+ SAMD")]  # fmt: skip
+        ("Transformer", "CAML-KD, teacher sees photo only", "Transformer\n+ CAML-KD")]  # fmt: skip
 fig, ax = plt.subplots(figsize=(7.2, 2.8))
 x = np.arange(len(BARS))
 for off, fill, col in ((-0.19, "linear", LIGHT), (0.19, "logistic", BLUE)):
