@@ -15,6 +15,7 @@ summaries exist in `outputs/`.
 | `2026-11-12_views-time-series-models-and-aml.docx` | `views_aml_figs.py`, then `views_aml_report.py` |
 | `2026-11-13_results-brief-ode-sde-aml.docx` | `views_aml_figs.py`, `brief_figs.py`, then `brief_report.py` |
 | `2026-11-18_half-synthetic-vs-no-photo.docx` | `scripts/analysis/a2sl_pop_compare.py`, `synth_figs.py`, then `synth_report.py` |
+| `2026-11-19_all-avocados-real-photos.docx` | `scripts/analysis/a2sl_all_compare.py`, `all_figs.py`, then `all_report.py` |
 | `2026-11-14_repo-audit.docx` | `audit_report.py` (hand-written; no charts) |
 
 Example:
