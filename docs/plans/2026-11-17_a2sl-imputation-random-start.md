@@ -268,3 +268,27 @@ Paired by forecast, seed-mean first, bootstrap over the 4 fruit.
   the no-photo forecast). On the test fruit the score falls monotonically in w for every latent and Weibull run, best
   at w = 1: the latent models add no information beyond the date here, so it is not only over-confidence.
 - Brief: `../results/2026-11-18_half-synthetic-vs-no-photo.docx` (`scripts/reports/synth_figs.py`, `synth_report.py`).
+
+## Transformer (2026-11-18, `outputs/a2sl_pop_compare/summary.md`, `scripts/run/submit_transformer.sh`)
+
+Same grid and CAML-KD / SAMD settings as the latent models. Real visits, random start, linear / logistic fill
+(no-photo forecast 1.17):
+
+| Transformer | Linear | Logistic |
+|---|---|---|
+| date only | 1.26 | 1.26 |
+| photo | 1.34 | 1.37 |
+| CAML-KD, teacher photo + scanner | 1.48 | 1.36 |
+| CAML-KD, teacher photo only | 1.31 | 1.32 |
+| teacher (photo + scanner) | 1.51 | 1.40 |
+| SAMD (either teacher) | did not train | did not train |
+
+- The closest neural model to the no-photo forecast, but worse on all 4 fruit in every setting. Fixed start is
+  very poor (6.0-6.5), as for the latent ODE.
+- SAMD: validation loss rose from the first round, so early stopping kept the first-epoch student (flat forecast,
+  MAE ~6 d, 2.23 for both teachers). Left out of the tables (`NOT_TRAINED` in `a2sl_pop_compare.py`). Would need
+  fewer epochs per round or a lower learning rate.
+- Blend curve: transformer + CAML-KD (photo-only teacher) reaches 1.14 at w = 0.6-0.8 on the test fruit; validation
+  picks w = 1. The only run where any mix dips below the no-photo forecast.
+- `a2sl_pop_compare.py` now writes one readable table per fill (reference / date only / photo / taught), and the
+  brief `../results/2026-11-18_half-synthetic-vs-no-photo.docx` is rebuilt around those tables.

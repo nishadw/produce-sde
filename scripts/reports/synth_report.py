@@ -147,7 +147,8 @@ def fill_table(fill):
 
 
 def best(fill):
-    r = min((r for r in T[fill] if "scanner at test" not in r["sees"]), key=lambda r: r["random"])
+    r = min((r for r in T[fill] if r["sees"] != "date only" and "scanner at test" not in r["sees"]),
+            key=lambda r: r["random"])
     return f"{r['model']} ({r['sees']}, {r['random']:.2f})"
 
 
@@ -175,8 +176,9 @@ bullet(f" photo only {sc('linear', 'Transformer')} (linear fill) / {sc('logistic
        "worse on every fruit. With SAMD it did not train (see caveats).", lead="The transformer (new):")  # fmt: skip
 bullet(f" the best is the latent SDE with SAMD ({sc('linear', 'Latent SDE', SAMD)}). The latent ODE is far worse "
        f"({sc('linear', 'Latent ODE')}).", lead="Every latent ODE / SDE run is worse than the no-photo forecast:")  # fmt: skip
-bullet(" mixing any neural model with the no-photo forecast only helps, all the way to using the no-photo forecast "
-       "alone. The models add nothing beyond the date here; it is not only that they are over-confident.",
+bullet(" mixing a latent model with the no-photo forecast keeps improving it all the way to the no-photo forecast "
+       "alone: the latent models add nothing beyond the date here, so it is not only over-confidence. The transformer "
+       "with CAML-KD is the one exception, and a small one (best mix 1.14 vs 1.17, picked on the test fruit).",
        lead="Blending does not rescue them:")  # fmt: skip
 
 doc.add_heading("How to read the tables", level=1)
@@ -204,9 +206,13 @@ bullet(" the teacher's extra scanner input never helps: a teacher that sees only
 
 doc.add_heading("4. Can a model be rescued by blending?", level=1)
 para("Each forecast is mixed with the no-photo forecast. Chosen on validation fruit, the mix is almost always 100 % "
-     "no-photo forecast. The chart scores every mix on the test fruit to show this is not a validation fluke.",
+     "no-photo forecast. The chart scores every mix on the test fruit, to check this is not a validation fluke.",
      size=9.5)  # fmt: skip
 picture("sy_blend.png", 6.4)
+bullet(" the latent ODE and SDE curves fall all the way to the no-photo forecast alone.", lead="Latent models:")
+bullet(" a 60–80 % mix of the transformer with CAML-KD reaches 1.14, just below 1.17. That mix was found by looking "
+       "at the test fruit, and validation picked 100 % no-photo, so it is a hint of signal at most.",
+       lead="Transformer + CAML-KD:")  # fmt: skip
 
 doc.add_heading("Caveats and next steps", level=1)
 bullet(" 4 fruit, all spoiling on day 7–9, and days 7–15 of every photo series are filled in, not real.",
