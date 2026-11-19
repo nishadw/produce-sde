@@ -48,6 +48,40 @@ def fold_path(k: int) -> Path:
     return ROOT / "configs" / "splits" / f"a2sl_view_fold{k}.json"
 
 
+# all-fruit study (docs/plans/2026-11-19_a2sl-all-fruit.md): every fruit with at least one unspoiled photo is held out
+# once (avo01-12); avo13-15 were first photographed already spoiled, so they have no forecast to score and always train.
+# Validation: two fruit whose spoilage was observed (seen unspoiled, then spoiled), never the test fruit.
+ALL_TEST = [f"avo{i:02d}" for i in range(1, 13)]
+OBSERVED = ["avo01", "avo02", "avo03", "avo08", "avo09", "avo10", "avo11", "avo12"]
+N_ALL = len(ALL_TEST)
+
+
+def all_fold_path(k: int) -> Path:
+    return ROOT / "configs" / "splits" / f"a2sl_all_fold{k}.json"
+
+
+def write_all_folds() -> None:
+    every = TRACKED + OTHERS
+    for k, test in enumerate(ALL_TEST):
+        pool = [f for f in OBSERVED if f != test]
+        val = [pool[k % len(pool)], pool[(k + 1) % len(pool)]]
+        train = [f for f in every if f != test and f not in val]
+        sp = {"splits": {"train": train, "val": val, "test": [test]}, "mode": "a2sl_all_lofo", "fold": k,
+              "data": "a2sl"}  # fmt: skip
+        all_fold_path(k).write_text(json.dumps(sp, indent=2))
+
+
+def folds_for(split: str) -> tuple[int, callable]:
+    """(number of folds, fold -> split file) for ``tracked4`` (the view study's 4 folds) or ``all`` (12 folds)."""
+    if split == "all":
+        if not all(all_fold_path(k).exists() for k in range(N_ALL)):
+            write_all_folds()
+        return N_ALL, all_fold_path
+    if not all(fold_path(k).exists() for k in range(N_FOLDS)):
+        write_folds()
+    return N_FOLDS, fold_path
+
+
 def write_folds() -> None:
     groups = [OTHERS[k::N_FOLDS] for k in range(N_FOLDS)]
     for k in range(N_FOLDS):

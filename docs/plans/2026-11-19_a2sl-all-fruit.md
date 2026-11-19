@@ -1,0 +1,37 @@
+# A2SL: all 15 avocados, real photos only (2026-11-19)
+
+Replaces the half-synthetic set as the main study (user, 2026-11-19: "use all the fruit in this dataset ... real photos
+only, drop fixed start"). The half-synthetic results stay in `2026-11-17_a2sl-imputation-random-start.md`.
+
+## Data
+- `load_a2sl_avocado` as is: every fruit's real visits, day-rule labels (day 9 = spoiled), visits after the first
+  spoiled one dropped. No fill (`--synth real`).
+- Clock: unchanged. Each sequence starts at t = 0 at its first visible photo; random start already re-zeroes, so a fruit
+  first photographed on day 7 (avo12) is the same kind of example as a random start.
+- What each fruit gives:
+
+| Fruit | Real photos | Outcome |
+|---|---|---|
+| avo01, 02, 03, 08, 09, 10, 11 | day 1 to day 9-13 | spoiled in (7, 9] (observed) |
+| avo12 | days 7, 9 | spoiled in (7, 9] (observed) |
+| avo07 / 06 / 05 / 04 | to day 7 / 5 / 3 / 1 (cut) | not spoiled by then (censored) |
+| avo13, 14, 15 | day 9 only | already spoiled at the only photo: no forecast to make |
+
+## Folds
+`configs/splits/a2sl_all_fold{0..11}.json` (`a2sl_views.write_all_folds`): test = one of avo01-12; val = two observed
+fruit other than the test fruit; train = the other 12 (avo13-15 always train). Matching leaves avo13-15 out of its
+reference set (no unspoiled moment to match against).
+
+## Runs (`scripts/run/submit_all.sh`)
+Random start only, 5 seeds:
+- grid (`outputs/a2sl_all`): matching, Weibull, latent ODE, latent SDE, transformer x photo / date only;
+- photo-only students (`outputs/a2sl_all_aml`): latent ODE / SDE / transformer x teacher, CAML-KD, SAMD, each with a
+  photo + scanner teacher and with a photo-only teacher.
+
+## Scoring (`scripts/analysis/a2sl_all_compare.py`)
+Every held-out fruit from every start day. Headline on the 8 observed fruit (the 4 cut fruit only say "not spoiled
+yet", which any forecast gets right); all 12 shown too. Paired test vs the no-photo forecast with a bootstrap over
+the 8 fruit.
+
+## Caveat
+Labels are the day rule, so every fruit spoils in (7, 9]: more fruit give more test cases, not fruit-to-fruit variation.

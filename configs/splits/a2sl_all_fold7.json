@@ -1,0 +1,28 @@
+{
+  "splits": {
+    "train": [
+      "avo03",
+      "avo11",
+      "avo04",
+      "avo05",
+      "avo06",
+      "avo07",
+      "avo09",
+      "avo10",
+      "avo12",
+      "avo13",
+      "avo14",
+      "avo15"
+    ],
+    "val": [
+      "avo01",
+      "avo02"
+    ],
+    "test": [
+      "avo08"
+    ]
+  },
+  "mode": "a2sl_all_lofo",
+  "fold": 7,
+  "data": "a2sl"
+}

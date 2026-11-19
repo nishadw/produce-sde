@@ -33,6 +33,7 @@ TRACKED = ("avo01", "avo02", "avo03", "avo11")
 RS, AML = Path("outputs/a2sl_synth_rs"), Path("outputs/a2sl_synth_aml")
 POP = (RS, "matching_time_synth-linear_start-random")
 OUT = Path("outputs/a2sl_pop_compare")
+SPLIT = "test_real"  # which predictions_<split>.npz is scored (a2sl_all_compare.py sets "test": real data throughout)
 W_GRID = np.round(np.arange(0, 1.0001, 0.05), 2)
 CURVE = np.round(np.arange(0, 1.0001, 0.1), 1)
 
@@ -102,7 +103,7 @@ def per_forecast(spec: tuple, blend: bool = False, fixed_w: float | None = None)
     acc: dict[str, list] = defaultdict(list)
     ws = []
     for fd in sorted(root.glob(f"seed*/{run}/fold*")):
-        z = load(fd / "predictions_test_real.npz")
+        z = load(fd / f"predictions_{SPLIT}.npz")
         F = z["F"]
         if blend:
             pfd = POP[0] / fd.parts[-3] / POP[1] / fd.name
@@ -117,7 +118,7 @@ def per_forecast(spec: tuple, blend: bool = False, fixed_w: float | None = None)
                 vs.append(np.mean(censored_log_score(Fv[ok], v["lo"][ok], v["hi"][ok])))
             w = float(W_GRID[int(np.argmin(vs))]) if fixed_w is None else fixed_w
             ws.append(w)
-            F, ok = mix(z, load(pfd / "predictions_test_real.npz"), w)
+            F, ok = mix(z, load(pfd / f"predictions_{SPLIT}.npz"), w)
             if not ok.all():
                 raise RuntimeError(f"test rows without a reference forecast in {fd}")
         lg = censored_log_score(F, z["lo"], z["hi"])

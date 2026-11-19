@@ -196,7 +196,8 @@ class TemporalMatching(eqx.Module):
     def fit(self, train: list[Item], val: list[Item], info: DatasetInfo, cfg) -> TemporalMatching:
         X = _train_features(train, info.feat_dim)
         mu, V = _pca(X, self.pca)
-        lib = [it for it in train if np.isfinite(it.spoil_hi)]
+        # fruit first photographed already spoiled (zero-width interval) have no moment to forecast from: not anchors
+        lib = [it for it in train if np.isfinite(it.spoil_hi) and it.spoil_hi > it.spoil_lo]
         if not lib:
             raise ValueError("temporal matching needs training fruit with a known spoilage interval")
         L = max(it.n_visits for it in lib)

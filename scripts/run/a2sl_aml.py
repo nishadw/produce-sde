@@ -42,7 +42,7 @@ from omegaconf import OmegaConf
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "run"))
-from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, N_FOLDS, fold_path, scan_view_arg, write_folds  # noqa: E402
+from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, folds_for, scan_view_arg  # noqa: E402
 
 from ripen.data.schema import all_starts  # noqa: E402
 from ripen.models import build_model  # noqa: E402
@@ -65,10 +65,10 @@ CONTROLS = ("photo_valall", "rounds_only")
 METHODS = ("photo", "teacher", *CONTROLS, *AML_METHODS)
 
 
-def compose_cfg(model: str, view: str, fold: int, seed: int, extra: list[str]):
+def compose_cfg(model: str, view: str, split_file: Path, seed: int, extra: list[str]):
     margs = [x for x in MODEL_ARGS[model] if not x.startswith("model.posterior_guidance")] + HIDDEN_ARGS[model]
     view_arg = [] if view == "all" else [f"data.scan_view={scan_view_arg(view)}"]
-    ov = ["data=a2sl", "horizon=20", "train.batch_size=8", *margs, *view_arg, f"splits.file={fold_path(fold)}",
+    ov = ["data=a2sl", "horizon=20", "train.batch_size=8", *margs, *view_arg, f"splits.file={split_file}",
           f"seed={seed}", f"+train.seed={seed}", *extra]  # fmt: skip
     with initialize_config_dir(str(ROOT / "configs"), version_base="1.3"):
         return compose("config", overrides=ov)
@@ -109,7 +109,9 @@ def main() -> None:
     ap.add_argument("--method", choices=METHODS, required=True)
     ap.add_argument("--view", default="concat", help="teacher's microwave input: an angle, all (pooled) or concat")
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3])
-    ap.add_argument("--folds", type=int, nargs="*", default=list(range(N_FOLDS)))
+    ap.add_argument("--folds", type=int, nargs="*", default=None)
+    ap.add_argument("--split", choices=["tracked4", "all"], default="tracked4",
+                    help="tracked4: avo01/02/03/11 held out (4 folds); all: each of avo01-12 (12 folds)")  # fmt: skip
     ap.add_argument("--alpha", type=float, default=None)
     ap.add_argument("--temp", type=float, default=None)
     ap.add_argument("--beta", type=float, default=None)
@@ -132,8 +134,8 @@ def main() -> None:
     ap.add_argument("--out", default="outputs/a2sl_aml")
     ap.add_argument("extra", nargs="*", help="extra Hydra overrides (smoke tests)")
     a = ap.parse_args()
-    if not all(fold_path(k).exists() for k in range(N_FOLDS)):
-        write_folds()
+    n_folds, fold_path = folds_for(a.split)
+    a.folds = list(range(n_folds)) if a.folds is None else a.folds
     name = f"{a.model}_{a.method}{a.tag}_view{a.view}"
     if len(a.seeds) * len(a.folds) > 1:
         # one process per seed x fold: on CPU, XLA's compiled code is never freed within a process and the jitted
@@ -154,7 +156,7 @@ def main() -> None:
                 continue
             out.mkdir(parents=True, exist_ok=True)
             extra = [*a.extra, *([f"train.lr={a.lr}"] if a.lr is not None else [])]
-            cfg = compose_cfg(a.model, a.view, k, s, extra)
+            cfg = compose_cfg(a.model, a.view, fold_path(k), s, extra)
             OmegaConf.save(cfg, out / "config.yaml")
             (out / "aml.json").write_text(json.dumps(vars(a), indent=2))
             t_items = load_items(cfg.data)

@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, N_FOLDS, fold_path, write_folds  # noqa: E402
+from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, folds_for  # noqa: E402
 
 # the two fit-directly baselines (ripen.models.classical) take no extra arguments
 MODEL_ARGS = {**MODEL_ARGS, "weibull": ["model=weibull"], "matching": ["model=matching"]}
@@ -35,20 +35,23 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=list(MODEL_ARGS), required=True)
     ap.add_argument("--input", choices=list(INPUTS), required=True)
-    ap.add_argument("--synth", choices=["linear", "logistic"], required=True)
+    ap.add_argument("--synth", choices=["linear", "logistic", "real"], required=True,
+                    help="real = the loader's real visits only, no fill")  # fmt: skip
+    ap.add_argument("--split", choices=["tracked4", "all"], default="tracked4",
+                    help="tracked4: avo01/02/03/11 held out (4 folds); all: each of avo01-12 (12 folds)")  # fmt: skip
     ap.add_argument("--start", choices=["fixed", "random"], default="fixed")
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
-    ap.add_argument("--folds", type=int, nargs="*", default=list(range(N_FOLDS)))
+    ap.add_argument("--folds", type=int, nargs="*", default=None)
     ap.add_argument("--out", default="outputs/a2sl_synth_rs")
     ap.add_argument("extra", nargs="*", help="extra Hydra overrides (smoke tests)")
     a = ap.parse_args()
-    if not all(fold_path(k).exists() for k in range(N_FOLDS)):
-        write_folds()
+    n_folds, fold_path = folds_for(a.split)
+    a.folds = list(range(n_folds)) if a.folds is None else a.folds
     name = run_name(a.model, a.input, a.synth, a.start)
     margs = [x for x in MODEL_ARGS[a.model] if not x.startswith("model.posterior_guidance")] + HIDDEN_ARGS[a.model]
     run_args = [*INPUTS[a.input], "data.scan_standardize=true", "data.eval_all_starts=true",
                 f"train.random_start={'true' if a.start == 'random' else 'false'}"]  # fmt: skip
-    run_args += [f"data.synthetic={a.synth}"]
+    run_args += [] if a.synth == "real" else [f"data.synthetic={a.synth}"]
     fail = 0
     for s in a.seeds:
         for k in a.folds:
