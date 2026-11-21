@@ -150,7 +150,8 @@ better = [r for r in usable if word(r) == "better"]
 best = min(usable, key=lambda r: r["obs"])
 neural = [r for r in usable if r["model"] in ("Latent ODE", "Latent SDE", "Transformer")]
 best_nn = min(neural, key=lambda r: r["obs"]) if neural else None
-blend_gain = [r for r in usable if r.get("blend") is not None and r["blend"] < REF - 0.02]
+blend_gain = [r for r in usable if r.get("blend") is not None and r["blend"] < REF - 0.02 and r["model"] != "Storage day"]
+SD, SD_T = get("Storage day"), get("Storage day", "date only")
 MATCH = get("Image matching")
 LOSSES = sorted(MATCH["vs"]["per_fruit"].items(), key=lambda kv: -kv[1])
 LOSSES = [(f, d) for f, d in LOSSES if d > 0]
@@ -187,8 +188,13 @@ bullet(f" better than the no-photo forecast on {MATCH['vs']['wins']} of 8 fruit,
        + " and ".join(f"{f} (+{d:.2f})" for f, d in LOSSES[:2])
        + f", so overall {sc('Image matching')}: {word(MATCH)}. Its day error is the lowest of any model "
        f"({MATCH['mae']:.1f} d vs {get('No-photo forecast', 'date only')['mae']:.1f} d).",
-       lead="Image matching is closest:")  # fmt: skip
+       lead="Image matching:")  # fmt: skip
 bullet(f" Weibull {sc('Weibull')} (photo), {sc('Weibull', 'date only')} (date only).", lead="Weibull:")  # fmt: skip
+if SD is not None:
+    bullet(f" a small model that asks 'what storage day is this photo from?' and then reads the spoilage day off the "
+           f"training fruit: {SD['obs']:.2f} against {REF:.2f} ({word(SD)}, better on {SD['vs']['wins']} of 8 fruit), "
+           f"day error {SD['mae']:.1f} d. Without photos it scores {SD_T['obs']:.2f}, so the gain comes from the photo "
+           "(the skin darkens from green to black over the week).", lead="Storage day (new):")  # fmt: skip
 bullet(" " + ("mixed with the no-photo forecast (mix chosen on validation fruit), "
               + ", ".join(f"{r['model']} ({r['sees']}) reaches {r['blend']:.2f}" for r in blend_gain)
               + f" against {REF:.2f}: a small gain, not tested for significance. Every other model's best mix is the "
@@ -229,7 +235,11 @@ bullet(" labels follow the day rule (day 9 = spoiled), so every fruit spoils bet
 bullet(" only avo01–03 and 11 have scans at every visit; the teacher sees scans where they exist. The teachers "
        "themselves are not in the table: they need the scanner at test time.",
        lead="Scanner coverage:")  # fmt: skip
-bullet(" matching and Weibull have no randomness, so their 5 repeats are identical.", lead="Deterministic models:")
+bullet(" matching, Weibull and storage day have no randomness, so their 5 repeats are identical.",
+       lead="Deterministic models:")  # fmt: skip
+bullet(" every fruit was photographed in the same session each day, so the storage-day model could partly be "
+       "recognising the session (light, background) rather than the fruit. The photos look alike apart from the "
+       "skin, but only fruit photographed on other dates would settle it.", lead="Same photo sessions:")  # fmt: skip
 bullet(" per-fruit spoilage labels from the lab, and more fruit with varied spoilage days.", lead="What would settle it:")
 
 OUT.parent.mkdir(parents=True, exist_ok=True)

@@ -48,3 +48,13 @@ Score on the 8 observed fruit (no-photo forecast 1.15; all 12 fruit: 0.98).
   and transformer + CAML-KD 1.51. Transformer + SAMD trained this time (1.79) but is still worse.
 - Blend chosen on validation: Weibull photo reaches 1.10 (untested); every other model's mix goes to w ≈ 1.
   The test-scored curve for the transformer (photo) dips to 1.11 at w = 0.7, which validation did not find.
+
+## Follow-up (2026-11-21)
+- Teacher-alone rows dropped from the table (they need the scanner at test time).
+- Image matching blend chosen on validation: w = 0 (model alone, 1.23). The test-scored curve dips to 0.96 at w = 0.4,
+  but 2 validation fruit per fold did not find it.
+- New `storage_day` model (`ripen.models.classical.StorageDay`, `scripts/run/submit_storage_day.sh`): photo -> storage
+  day (ridge multinomial logistic on 8 PCA components, combined over the visible photos via their gaps), then the
+  training fruit's spoilage interval in storage days. **0.33 vs 1.15, better on 8 of 8 fruit (bootstrap excludes 0),
+  day error 0.6 d.** Date only: 1.17. Caveat: every fruit shared one photo session per day, so a session shortcut
+  (lighting/background) cannot be ruled out with this data; the skin colour change is visible by eye.
