@@ -186,19 +186,20 @@ if best_nn is not None:
            lead="Neural models:")  # fmt: skip
 bullet(f" better than the no-photo forecast on {MATCH['vs']['wins']} of 8 fruit, but much worse on "
        + " and ".join(f"{f} (+{d:.2f})" for f, d in LOSSES[:2])
-       + f", so overall {sc('Image matching')}: {word(MATCH)}. Its day error is the lowest of any model "
+       + f", so overall {sc('Image matching')}: {word(MATCH)}. Its day error is low "
        f"({MATCH['mae']:.1f} d vs {get('No-photo forecast', 'date only')['mae']:.1f} d).",
        lead="Image matching:")  # fmt: skip
 bullet(f" Weibull {sc('Weibull')} (photo), {sc('Weibull', 'date only')} (date only).", lead="Weibull:")  # fmt: skip
 if SD is not None:
     bullet(f" a small model that asks 'what storage day is this photo from?' and then reads the spoilage day off the "
-           f"training fruit: {SD['obs']:.2f} against {REF:.2f} ({word(SD)}, better on {SD['vs']['wins']} of 8 fruit), "
+           f"training fruit: {SD['obs']:.2f} against {REF:.2f} (better on {SD['vs']['wins']} of 8 fruit; "
+           "the bootstrap excludes 0), "
            f"day error {SD['mae']:.1f} d. Without photos it scores {SD_T['obs']:.2f}, so the gain comes from the photo "
            "(the skin darkens from green to black over the week).", lead="Storage day (new):")  # fmt: skip
 bullet(" " + ("mixed with the no-photo forecast (mix chosen on validation fruit), "
               + ", ".join(f"{r['model']} ({r['sees']}) reaches {r['blend']:.2f}" for r in blend_gain)
-              + f" against {REF:.2f}: a small gain, not tested for significance. Every other model's best mix is the "
-              "no-photo forecast alone."
+              + f" against {REF:.2f}: a small gain, not tested for significance. Image matching and storage "
+              "day keep the model alone; the neural models' best mix is the no-photo forecast alone."
               if blend_gain else "mixing any model with the no-photo forecast, the mix chosen on validation fruit, "
               "never beats the no-photo forecast."), lead="Blending:")  # fmt: skip
 
