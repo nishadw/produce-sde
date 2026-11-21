@@ -1,10 +1,10 @@
 """Course progress report, 21 November 2026 (report env). Reads the all-fruit numbers
-(outputs/a2sl_all_compare/summary.json, scripts/analysis/a2sl_all_compare.py) and its chart (all_figs.py).
+(outputs/a2sl_all_compare/summary.json, scripts/analysis/a2sl_all_compare.py).
 Writes 2026-11-21_progress-report.docx to ../results (``_paths.RESULTS``)."""
 
 import json
 
-from _paths import FIGS, REPO, RESULTS
+from _paths import REPO, RESULTS
 
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -86,6 +86,9 @@ def table(hdr, rows, widths, size=9, highlight=None):
     t._tbl.tblPr.append(layout)
     for j, w in enumerate(widths):
         t.columns[j].width = Inches(w)
+    hdr_row = OxmlElement("w:tblHeader")  # repeat the header row if the table breaks across pages
+    hdr_row.set(qn("w:val"), "true")
+    t.rows[0]._tr.get_or_add_trPr().append(hdr_row)
     for i, r in enumerate([hdr, *rows]):
         for j, val in enumerate(r):
             c = t.cell(i, j)
@@ -150,7 +153,10 @@ for lead, text in (
      "(Weibull), \"image matching\" (find the training fruit that looks most similar) and a new storage-day model, "
      "which guesses from the photo how many days the fruit has been stored, then uses when similar fruit spoiled."),
     ("Teacher-student training. ", "A \"teacher\" model sees photos and microwave scans and coaches a \"student\" "
-     "that only needs photos, so the scanner is not needed once the model is in use."),
+     "that only needs photos, so the scanner is not needed once the model is in use. Two ways of coaching: "
+     "CAML-KD, where the teacher is trained first and kept fixed, and the student learns to copy its forecasts; and "
+     "SAMD, where the two take turns for several rounds: the teacher starts as a copy of the student, trains with the "
+     "scan added, then the student trains to match the teacher's internal summary of the fruit."),
     ("How models are judged. ", "Each fruit is hidden from training in turn and then predicted. The main score "
      "rewards giving high odds to the day the fruit actually spoiled (lower is better). Every model must beat a "
      "no-photo forecast, which ignores the photo and says how many days fruit usually have left. Differences are "
@@ -160,27 +166,31 @@ for lead, text in (
 
 # ---- 3. Results -----------------------------------------------------------------------------------------------------
 doc.add_heading("3. Results", level=1)
-table(
-    ["Date", "Experiment", "What we learned"],
-    [
-        ["28 Oct", "Public avocados", "The temperature idea works: at an unseen temperature, error drops 1.5–2.4×. "
-                                      "Its \"80 % sure\" ranges are right 94 % of the time."],
-        ["6–10 Nov", "Lab mangoes and avocados, scanner",
-         "On mangoes the microwave scan beats photos; on avocados it barely helps. Three of the six scan angles are "
-         "clearly better."],
-        ["12–13 Nov", "Teacher-student training",
-         "Students improved, but because of how they were trained, not because of what the scanner showed."],
-        ["17–21 Nov", "Lab avocados, all 15 fruit",
-         "Fixed a data bug. Only the storage-day model beats the no-photo forecast."],
-    ],
-    [0.75, 1.65, 4.4],
-    size=8.5,
-    highlight=3,
-)  # fmt: skip
-doc.add_picture(str(FIGS / "al_scores.png"), width=Inches(5.6))
-doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
-para("Lab avocados: each model's score (lower is better). Dashed line = the no-photo forecast; only the blue bar is "
-     "below it. * = the teacher sees photos only.", size=8.5, color=GREY, after=4)  # fmt: skip
+para("Latest experiment: all 15 lab avocados, real photos only. Scores are on the 8 fruit seen both before and after "
+     "spoiling; lower is better. \"vs no-photo\" says whether the gap passes a statistical test across fruit.",
+     size=9.5, after=3)  # fmt: skip
+WORD = {"better": "better", "worse": "worse", "no clear difference": "no clear diff."}
+
+
+def row(model, sees, label):
+    r = get(model, sees)
+    if "vs" not in r:
+        return [model, label, f"{r['obs']:.2f}", "—", "—", f"{r['mae']:.1f} d"]
+    lo, hi = r["vs"]["fruit_ci"][:2]
+    w = "better" if hi < 0 else "worse" if lo > 0 else "no clear difference"
+    return [model, label, f"{r['obs']:.2f}", WORD[w], f"{r['vs']['wins']} of 8", f"{r['mae']:.1f} d"]
+
+
+TEACH = "teacher sees photo + scanner"
+rows = [row("No-photo forecast", "date only", "no photo (reference)"), row("Storage day", "photo", "photo"),
+        row("Image matching", "photo", "photo"), row("Weibull", "photo", "photo")]
+for m in ("Transformer", "Latent SDE", "Latent ODE"):
+    rows += [row(m, "photo", "photo"), row(m, f"CAML-KD, {TEACH}", "photo, + CAML-KD"),
+             row(m, f"SAMD, {TEACH}", "photo, + SAMD")]
+table(["Model", "Trained with", "Score", "vs no-photo", "Fruit better", "Day error"], rows,
+      [1.25, 1.55, 0.6, 1.1, 0.9, 0.8], size=8.5, highlight=1)  # fmt: skip
+para("Day error = days between the predicted and actual spoil day. CAML-KD and SAMD rows use a teacher that also sees "
+     "the scanner; a photo-only teacher gives scores within 0.1.", size=8.5, color=GREY, after=4)  # fmt: skip
 for lead, text in (
     ("A simple guess is hard to beat. ", f"On the lab avocados every complex model scores worse than the no-photo "
      f"forecast ({REF:.2f}); the best of them, image matching, scores {MATCH['obs']:.2f}."),
@@ -189,6 +199,10 @@ for lead, text in (
      f"storage-day model asks exactly that, and its guess of the spoil day is off by only {SD['mae']:.1f} days."),
     ("Too little data for big models. ", "With about 11 fruit to learn from, large models memorise noise; small "
      "models do better."),
+    ("Coaching helps little. ", "CAML-KD and SAMD help some models and hurt others (by up to half a point), and "
+     "none reaches the no-photo forecast; earlier experiments showed the gains come from the take-turns schedule, not the scanner."),
+    ("Earlier experiments. ", "On the public avocados the temperature idea works (1.5–2.4× lower error at a new "
+     "temperature). On mangoes the microwave scan beats photos; on avocados it barely helps."),
 ):  # fmt: skip
     bullet(text, lead=lead)
 
