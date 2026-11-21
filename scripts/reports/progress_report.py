@@ -142,27 +142,32 @@ table(
 # ---- 2. Methodology -------------------------------------------------------------------------------------------------
 doc.add_heading("2. Methodology", level=1)
 for lead, text in (
-    ("Main model (latent SDE). ", "Think of each fruit as having a hidden \"ripeness meter\" that climbs over time, "
+    ("Latent SDE (main model). ", "Think of each fruit as having a hidden \"ripeness meter\" that climbs over time, "
      "a little faster or slower by chance. The photos are blurry readings of the meter, and the fruit spoils the "
-     "first time the meter crosses a line. The model learns how the meter moves. Because the lab only checks fruit "
-     "every couple of days, we never know the exact spoil day, only a window (\"fine on day 7, bad by day 9\"); the "
-     "model handles these windows exactly, with a math method (PDEs) rather than by trial simulation."),
-    ("Temperature. ", "Warmth just makes the meter run faster, following a standard chemistry law. So the model can "
-     "predict at a temperature it has never seen."),
+     "first time the meter crosses a line. The model learns how the meter moves. Because fruit is only checked every "
+     "couple of days, we know a window (\"fine on day 7, bad by day 9\"), not the exact day; the model handles these "
+     "windows exactly, with math (PDEs) rather than trial simulation."),
+    ("Storage day (new). ", "A small model that answers one question: how many days has this fruit been stored? It "
+     "learns from training photos what the skin looks like on each day, combines all the photos it has (knowing the "
+     "days between them), and then predicts the spoil day from when similar training fruit spoiled."),
     ("Other models compared. ", "Simpler time-series networks (latent ODE, transformer), a classic survival model "
-     "(Weibull), \"image matching\" (find the training fruit that looks most similar) and a new storage-day model, "
-     "which guesses from the photo how many days the fruit has been stored, then uses when similar fruit spoiled."),
+     "(Weibull) and \"image matching\" (find the training fruit that looks most similar)."),
     ("Teacher-student training. ", "A \"teacher\" model sees photos and microwave scans and coaches a \"student\" "
-     "that only needs photos, so the scanner is not needed once the model is in use. Two ways of coaching: "
-     "CAML-KD, where the teacher is trained first and kept fixed, and the student learns to copy its forecasts; and "
-     "SAMD, where the two take turns for several rounds: the teacher starts as a copy of the student, trains with the "
-     "scan added, then the student trains to match the teacher's internal summary of the fruit."),
-    ("How models are judged. ", "Each fruit is hidden from training in turn and then predicted. The main score "
-     "rewards giving high odds to the day the fruit actually spoiled (lower is better). Every model must beat a "
-     "no-photo forecast, which ignores the photo and says how many days fruit usually have left. Differences are "
-     "only called real if they hold up in a statistical test across fruit."),
+     "that only needs photos, so no scanner is needed once the model is in use. Two ways of coaching:"),
 ):  # fmt: skip
     bullet(text, lead=lead)
+for lead, text in (
+    ("CAML-KD: ", "the teacher is trained first and then kept fixed; the student learns the task and, at the same "
+     "time, to copy the teacher's forecasts."),
+    ("SAMD: ", "teacher and student take turns for several rounds. Each round the teacher starts as a copy of the "
+     "student, trains with the scan added, then the student trains to match the teacher's internal summary of the "
+     "fruit. They share the final prediction step."),
+):  # fmt: skip
+    bullet(text, lead=lead, style="List Bullet 2")
+bullet("Each fruit is hidden from training in turn and then predicted. The main score rewards giving high odds to "
+       "the day the fruit actually spoiled (lower is better). Every model must beat a no-photo forecast, which "
+       "ignores the photo and says how many days fruit usually have left. Differences are only called real if they "
+       "hold up in a statistical test across fruit.", lead="How models are judged. ")  # fmt: skip
 
 # ---- 3. Results -----------------------------------------------------------------------------------------------------
 doc.add_heading("3. Results", level=1)
@@ -201,14 +206,14 @@ for lead, text in (
      "models do better."),
     ("Coaching helps little. ", "CAML-KD and SAMD help some models and hurt others (by up to half a point), and "
      "none reaches the no-photo forecast; earlier experiments showed the gains come from the take-turns schedule, not the scanner."),
-    ("Earlier experiments. ", "On the public avocados the temperature idea works (1.5–2.4× lower error at a new "
-     "temperature). On mangoes the microwave scan beats photos; on avocados it barely helps."),
+    ("Earlier experiments. ", "On the public avocados the latent SDE's \"80 % sure\" ranges were right 94 % of "
+     "the time. On mangoes the microwave scan beats photos; on avocados it barely helps."),
 ):  # fmt: skip
     bullet(text, lead=lead)
 
 # ---- 4. Conclusion and future work ----------------------------------------------------------------------------------
 doc.add_heading("4. Conclusion and future work", level=1)
-para("The main model works well on the large public dataset, especially at new temperatures. On the small lab "
+para("The main model gives well-calibrated odds on the large public dataset. On the small lab "
      "datasets, a simple model that estimates how far along the fruit is wins. One risk remains: every fruit was "
      "photographed in the same session each day, so the model might be recognising the lighting of that day rather "
      "than the fruit itself.")  # fmt: skip
@@ -218,12 +223,14 @@ for text in (
     "alone.",
     "Test the storage-day model on the mangoes and the public avocados, where fruit spoil on different days.",
     "Combine the two: use the storage-day guess as the starting point of the main model.",
+    "Storage temperature: let warmth speed up the ripeness meter (a standard chemistry law, the Arrhenius law), so "
+    "the model can predict at a temperature it has never seen, using the public avocados' three temperatures.",
     "Write the final report and presentation, and publish the code on GitHub.",
 ):  # fmt: skip
     bullet(text, style="List Number")
 sub("Realistic contributions by the end of the semester")
 for text in (
-    "A tested spoilage forecaster that gives honest odds and works at new storage temperatures (done).",
+    "A tested spoilage forecaster that gives honest odds, not just a single day (done).",
     "A fair comparison of six models on small lab datasets, with statistical tests.",
     "The storage-day model with the session check done, and clear advice for the lab on when to trust it and which "
     "scanner angles to keep.",
