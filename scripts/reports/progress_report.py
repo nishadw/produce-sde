@@ -106,20 +106,26 @@ def table(hdr, rows, widths, size=9, highlight=None):
 # =====================================================================================================================
 doc.add_paragraph("Progress Report: Predicting When Produce Spoils", style="Title")
 para("CMSC 498Z final project · Nishad Wajge · 21 November 2026", color=GREY, size=9.5, after=6)
-para("Goal: from a few photos of a fruit (and, for lab fruit, microwave scans) taken at irregular times, forecast a "
-     "calibrated probability distribution over the day it spoils. The core model is a latent neural stochastic "
-     "differential equation (SDE): ripeness drifts and diffuses over time, and spoilage is the first time it crosses a "
-     "threshold. Its likelihood for interval-censored labels is computed exactly from the Kolmogorov PDEs rather than "
-     "by simulating paths.")  # fmt: skip
 
-doc.add_heading("At a glance", level=1)
+
+def sub(text):
+    doc.add_paragraph().add_run(text).bold = True
+
+
+# ---- 1. Introduction ------------------------------------------------------------------------------------------------
+doc.add_heading("1. Introduction", level=1)
+para("Fruit spoils on its own schedule, and knowing when lets stores and labs act before it is wasted. The goal of "
+     "this project is to forecast, from a few photos of a fruit (and, for lab fruit, microwave scans) taken at "
+     "irregular times, a calibrated probability distribution over the day it will spoil. The forecast should say not "
+     "only the most likely day but how sure it is.")  # fmt: skip
+para("Three datasets are used: a public avocado set (478 fruit photographed daily at 3 storage temperatures), 48 lab "
+     "mangoes (photo + microwave scans) and 15 lab avocados (photo + microwave scans). The table below gives the "
+     "project's status as of this report.")  # fmt: skip
 table(
     ["", "Status"],
     [
         ["Code", "Python package ripen (JAX / Equinox / Diffrax): 6 forecasting models, 2 teacher-student training "
                  "methods, exact first-passage PDE solver, CPU test suite, SLURM drivers for the UMIACS cluster"],
-        ["Data", "3 datasets: public avocado set (478 fruit, 3 storage temperatures), lab mangoes (48, photo + "
-                 "microwave), lab avocados (15, photo + microwave)"],
         ["Studies", "7 completed, each with a written report; about 110 training runs in the latest one"],
         ["Best result so far", f"New storage-day model: score {SD['obs']:.2f} vs {REF:.2f} for the no-photo "
                                f"forecast, better on {SD['vs']['wins']} of 8 lab avocados; day error "
@@ -127,27 +133,42 @@ table(
         ["Main open question", "Is the storage-day model reading the fruit, or the photo session it was taken in?"],
     ],
     [1.4, 5.4],
-    highlight=3,
+    highlight=2,
 )  # fmt: skip
 
-doc.add_heading("1. What has been done", level=1)
-doc.add_paragraph().add_run("Code developed").bold = True
+# ---- 2. Methodology -------------------------------------------------------------------------------------------------
+doc.add_heading("2. Methodology", level=1)
+sub("Core model: latent neural SDE")
 for lead, text in (
-    ("Latent SDE with exact likelihood. ", "Backward Kolmogorov PDE (Crank–Nicolson) for the forecast, forward "
-     "Fokker–Planck filtering between visits, Brownian-bridge factors for censored labels. Validated against the "
-     "known inverse-Gaussian first-passage law (to 1e-3) and by recovering parameters on synthetic data."),
-    ("Temperature as a clock. ", "Storage temperature changes only the speed of ripening (Arrhenius law with a "
-     "learned activation energy), so the model can forecast at a temperature it never trained on."),
-    ("Comparison models. ", "Latent ODE, transformer, Weibull survival model, image matching (find the most similar "
-     "training fruit), and a new storage-day model (below)."),
-    ("Teacher-student training. ", "CAML-style distillation and SAMD: a teacher that sees photos + microwave scans "
-     "trains a student that needs only photos at test time."),
-    ("Evaluation. ", "Censored log score, CRPS, interval coverage, leave-one-fruit-out folds, 5 seeds, and paired "
-     "bootstrap tests over fruit."),
+    ("Ripeness as a random process. ", "A hidden ripeness value drifts and diffuses over time according to a neural "
+     "stochastic differential equation (SDE); the photos are noisy readings of it."),
+    ("Spoilage as a threshold crossing. ", "The fruit spoils the first time ripeness crosses a boundary. The "
+     "probability of that, and the likelihood of interval-censored labels ('fine on day 7, spoiled by day 9'), is "
+     "computed exactly from the Kolmogorov PDEs (Crank–Nicolson), not by simulating paths. Validated against the "
+     "known inverse-Gaussian law (to 1e-3) and by recovering parameters on synthetic data."),
+    ("Temperature as a clock. ", "Storage temperature changes only the speed of ripening (Arrhenius law with a learned "
+     "activation energy), so the model can forecast at a temperature it never trained on."),
 ):  # fmt: skip
     bullet(text, lead=lead)
+sub("Comparison models and training methods")
+for lead, text in (
+    ("Neural: ", "latent ODE (the deterministic version) and a small transformer."),
+    ("Classical: ", "a Weibull survival model and image matching (forecast from the most similar training fruit)."),
+    ("Storage day (new): ", "a small classifier estimates the fruit's storage day from its photos, combining them "
+     "through the days between them; the spoilage day is then read off the training fruit."),
+    ("Teacher-student training: ", "CAML-style distillation and SAMD, where a teacher that sees photos + microwave "
+     "scans trains a student that needs only photos at test time."),
+):  # fmt: skip
+    bullet(text, lead=lead)
+sub("Evaluation")
+bullet(" censored log score (lower is better), plus day error, CRPS and interval coverage.", lead="Scores:")
+bullet(" each fruit held out in turn, forecast from every start day; 5 seeds; paired bootstrap over fruit for "
+       "significance.", lead="Protocol:")  # fmt: skip
+bullet(" every model is compared with a no-photo forecast (how many days fruit usually have left). A model that "
+       "cannot beat it is not getting anything useful from the photos.", lead="Reference:")  # fmt: skip
 
-doc.add_paragraph().add_run("Studies and what they showed").bold = True
+# ---- 3. Results -----------------------------------------------------------------------------------------------------
+doc.add_heading("3. Results", level=1)
 table(
     ["Date", "Study", "Finding"],
     [
@@ -167,27 +188,32 @@ table(
     size=8.5,
     highlight=5,
 )  # fmt: skip
-
-doc.add_heading("2. Ideas formed", level=1)
-for lead, text in (
-    ("Beat a simple reference first. ", "Every model is compared with a no-photo forecast (how many days fruit "
-     "usually have left). Most neural models did not beat it, which reshaped the project."),
-    ("The labels decide what a photo can add. ", "The lab avocados are labelled by a day rule (spoiled on day 9), so "
-     "every fruit spoils at the same time. A photo cannot explain differences between fruit; it can only tell how "
-     "far along the fruit is. That led to the storage-day model: estimate the storage day from the photo, then read "
-     "the spoilage day off the training fruit."),
-    ("Small data favours small models. ", f"With about 11 training fruit per fold, the latent ODE/SDE and transformer "
-     f"overfit (transformer {TF['obs']:.2f}, image matching {MATCH['obs']:.2f}, storage day {SD['obs']:.2f})."),
-    ("The scanner helps less than expected. ", "On avocados the microwave scanner barely improves even the teacher; "
-     "on mangoes it clearly helps."),
-):  # fmt: skip
-    bullet(text, lead=lead)
 doc.add_picture(str(FIGS / "al_scores.png"), width=Inches(6.6))
 doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 para("Lab avocados, 8 fruit observed to spoil, each model's best setting. Lower is better; dashed line = no-photo "
      "forecast. * = the teacher sees photos only.", size=8.5, color=GREY)  # fmt: skip
+sub("What the results show")
+for lead, text in (
+    ("The simple reference is hard to beat. ", "On the lab avocados most models, including every neural one, score "
+     f"worse than the no-photo forecast ({REF:.2f}): transformer {TF['obs']:.2f}, image matching {MATCH['obs']:.2f}."),
+    ("The labels decide what a photo can add. ", "The lab avocados are labelled by a day rule (spoiled on day 9), so "
+     "every fruit spoils at the same time. A photo cannot explain differences between fruit; it can only tell how far "
+     "along the fruit is. The storage-day model is built around exactly that, and it is the one model that wins "
+     f"({SD['obs']:.2f}, day error {SD['mae']:.1f} d)."),
+    ("Small data favours small models. ", "With about 11 training fruit per fold, the latent ODE/SDE and transformer "
+     "overfit; the few-parameter models do best."),
+    ("The scanner helps less than expected. ", "On avocados the microwave scanner barely improves even the teacher; on "
+     "mangoes it clearly helps."),
+):  # fmt: skip
+    bullet(text, lead=lead)
 
-doc.add_heading("3. What remains to be done", level=1)
+# ---- 4. Conclusion and future work ----------------------------------------------------------------------------------
+doc.add_heading("4. Conclusion and future work", level=1)
+para("The latent SDE delivers calibrated forecasts and transfers to unseen storage temperatures on the large public "
+     "set. On the small lab sets, the deciding factor is what the labels can reveal: estimating how far along a fruit "
+     "is from its photo beats every heavier model. The main risk to that result is that all fruit were photographed "
+     "in the same session each day, so the model might partly recognise the session rather than the fruit.")  # fmt: skip
+sub("What remains to be done")
 for text in (
     "Check that the storage-day model reads the fruit, not the session: rerun it on photos cropped to the fruit and "
     "on colour-only features.",
@@ -198,8 +224,7 @@ for text in (
     "Final report and presentation; clean up the code and push it to GitHub before the cluster account is archived.",
 ):  # fmt: skip
     bullet(text, style="List Number")
-
-doc.add_heading("4. Expected contributions by the end of the semester", level=1)
+sub("Expected contributions by the end of the semester")
 for lead, text in (
     ("A tested latent-SDE spoilage forecaster ", "with exact first-passage likelihoods and a temperature clock that "
      "transfers to unseen storage temperatures (done; written up)."),
@@ -211,8 +236,7 @@ for lead, text in (
      "training schedule rather than from the scanner."),
 ):  # fmt: skip
     bullet(text, lead=lead)
-
-doc.add_heading("5. Longer-term goals, if time allows", level=1)
+sub("Longer-term goals, if time allows")
 for text in (
     "Per-fruit spoilage labels (e.g. firmness) instead of the day rule, so models can learn why fruit spoil at "
     "different times.",
