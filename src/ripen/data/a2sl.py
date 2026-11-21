@@ -204,6 +204,7 @@ def load_a2sl_avocado(
                 spoil_hi=hi,
                 meta={
                     "source": "a2sl_avocado_jun2023",
+                    "first_day": day0,  # storage day of the first photo (``t`` counts from here)
                     "label_source": labels,
                     "cut_day": None if pd.isna(p.cut_day) else int(p.cut_day),
                     "tracked_to_end": bool(p.tracked_to_end),

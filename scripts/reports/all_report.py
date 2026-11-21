@@ -226,7 +226,8 @@ bullet(" the latent ODE and SDE curves fall all the way to the no-photo forecast
 doc.add_heading("Caveats", level=1)
 bullet(" labels follow the day rule (day 9 = spoiled), so every fruit spoils between day 7 and 9. More fruit give "
        "more test cases, not fruit-to-fruit differences for the photos to explain.", lead="Same answer for every fruit:")  # fmt: skip
-bullet(" only avo01–03 and 11 have scans at every visit; the teacher sees scans where they exist.",
+bullet(" only avo01–03 and 11 have scans at every visit; the teacher sees scans where they exist. The teachers "
+       "themselves are not in the table: they need the scanner at test time.",
        lead="Scanner coverage:")  # fmt: skip
 bullet(" matching and Weibull have no randomness, so their 5 repeats are identical.", lead="Deterministic models:")
 bullet(" per-fruit spoilage labels from the lab, and more fruit with varied spoilage days.", lead="What would settle it:")

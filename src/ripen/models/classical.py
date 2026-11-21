@@ -236,3 +236,157 @@ class TemporalMatching(eqx.Module):
         print(f"matching: {len(lib)} library fruit, {int(A.sum())} anchors, bandwidth {best} x median "
               f"(val log score {best_s:.3f})", flush=True)  # fmt: skip
         return eqx.tree_at(lambda t: t.h2, m, jnp.asarray(best * pen, jnp.float32))
+
+
+def _storage_days(it: Item) -> np.ndarray:
+    """Storage day of every visit of ``it`` (``meta["first_day"]`` plus any random-start shift)."""
+    day0 = float(it.meta.get("first_day", 0.0)) + float(it.meta.get("start_shift", 0.0))
+    return np.array([day0 + v.t for v in it.visits])
+
+
+class StorageDay(eqx.Module):
+    """How many days has this fruit been stored? A photo -> storage-day classifier, turned into a spoilage forecast.
+
+    Built for data whose spoilage follows the calendar (A2SL's day rule), where the question a photo can answer is
+    "what day is it for this fruit?", not "how fast does this one ripen?". Fit:
+
+    * classes = the storage days seen in training (A2SL: 1, 3, ..., 13), each training photo labelled with its day;
+    * a ridge multinomial logistic regression on ``pca`` PCA components of the photos gives ``p(day | photo)``;
+    * the library = every training fruit's spoilage interval in storage days.
+
+    Forecast for a query whose visible photos were taken ``g_i`` days before now: for each candidate day ``d`` of now,
+    ``log p(d) = log prior(d) + temp * sum_i [log p(d - g_i | photo_i) - log p_train(d - g_i)]``, where the prior is how
+    often training fruit were unspoiled on day ``d`` and a photo whose day ``d - g_i`` is not a class (e.g. before day
+    1) rules ``d`` out. So the time gaps alone already exclude impossible days; with no photos (date only) this is the
+    gap-aware base rate. Given ``d``, the days left follow the library: a uniform on each training fruit's remaining
+    interval ``(lo - d, hi - d]`` among those not yet spoiled by ``d``. ``eps`` of the prior-only forecast keeps it
+    proper. ``ridge`` and ``temp`` are chosen on the validation fruit by the censored log score.
+    """
+
+    horizon: int = eqx.field(static=True)
+    pca: int = eqx.field(static=True)
+    tol: float = eqx.field(static=True)
+    eps: float = eqx.field(static=True)
+    mu: Array
+    V: Array
+    W: Array  # [q + 1, K] logistic weights (last row: bias)
+    days: Array  # [K] class storage days
+    log_ptrain: Array  # [K] class frequency among training photos
+    log_prior: Array  # [K] how often a training fruit was seen unspoiled on that day
+    lib_lo: Array  # [J] spoilage interval in storage days
+    lib_hi: Array
+    temp: Array
+
+    def __init__(self, feat_dim: int, horizon: int, pca: int = 8, tol: float = 1.01, eps: float = 0.02):
+        self.horizon, self.pca, self.tol, self.eps = horizon, pca, tol, eps
+        q = max(1, min(pca, feat_dim))
+        self.mu, self.V = jnp.zeros(feat_dim), jnp.zeros((q, feat_dim))
+        self.W = jnp.zeros((q + 1, 1))
+        self.days, self.log_ptrain, self.log_prior = jnp.zeros(1), jnp.zeros(1), jnp.zeros(1)
+        self.lib_lo, self.lib_hi, self.temp = jnp.zeros(1), jnp.ones(1), jnp.asarray(1.0)
+
+    def _log_post(self, batch: Batch, temp: Array) -> Array:
+        """``[B, K]`` normalised log posterior over today's storage day."""
+        z = (batch.feat - self.mu) @ self.V.T  # [B, V, q]
+        logits = z @ self.W[:-1] + self.W[-1]
+        ll = jax.nn.log_softmax(logits, -1) - self.log_ptrain  # [B, V, K] scaled likelihood of each class
+        d_vis = self.days[None, :, None] - (batch.t_now[:, None] - batch.t)[:, None, :]  # [B, K(now), V]: day of visit
+        diff = jnp.abs(d_vis[..., None] - self.days)  # [B, K, V, K]
+        cls, gap = jnp.argmin(diff, -1), jnp.min(diff, -1)  # [B, K, V]
+        llv = jnp.take_along_axis(jnp.broadcast_to(ll[:, None], (*cls.shape, ll.shape[-1])), cls[..., None], -1)[..., 0]
+        vis = batch.visible[:, None, :]
+        ok = jnp.all(~vis | (gap <= self.tol), -1)  # every visible photo falls on a known day
+        lp = self.log_prior + temp * jnp.sum(jnp.where(vis, llv, 0.0), -1)
+        lp = jnp.where(ok, lp, -jnp.inf)
+        lp = jnp.where(jnp.any(ok, -1, keepdims=True), lp, self.log_prior)  # no consistent day: fall back to the prior
+        return jax.nn.log_softmax(lp, -1)
+
+    def _day_cdf(self) -> Array:
+        """``[K, H+1]`` days-left CDF given today's storage day, mixed over the library fruit not yet spoiled."""
+        h = jnp.arange(self.horizon + 1, dtype=jnp.float32)
+        d = self.days[:, None]
+        alive = self.lib_hi[None] > d  # [K, J]
+        rlo = jnp.maximum(self.lib_lo[None] - d, 0.0)
+        rhi = self.lib_hi[None] - d
+        F = jnp.clip((h - rlo[..., None]) / jnp.maximum(rhi - rlo, 1e-3)[..., None], 0.0, 1.0)  # [K, J, H+1]
+        w = alive / jnp.maximum(alive.sum(-1, keepdims=True), 1)
+        return jnp.einsum("kj,kjh->kh", w, F)
+
+    def _cdf(self, batch: Batch, temp: Array) -> Array:
+        Fd = self._day_cdf()
+        F = jnp.exp(self._log_post(batch, temp)) @ Fd
+        F_pop = jax.nn.softmax(self.log_prior) @ Fd
+        return (1.0 - self.eps) * F + self.eps * F_pop[None]
+
+    def predict_cdf(self, batch: Batch, key: Array) -> Array:
+        return self._cdf(batch, self.temp)
+
+    def loss(self, batch: Batch, key: Array) -> Array:  # only for interface completeness: fit() does the work
+        return jnp.asarray(0.0)
+
+    def fit(self, train: list[Item], val: list[Item], info: DatasetInfo, cfg) -> StorageDay:
+        X = _train_features(train, info.feat_dim)
+        mu, V = _pca(X, self.pca)
+        xs, ys, unsp = [], [], []
+        for it in train:
+            sd = _storage_days(it)
+            for v, d in zip(it.visits, sd, strict=True):
+                # date only: no photo features, so the classifier learns just how often each day occurs
+                xs.append(np.zeros(V.shape[0]) if v.features is None else (v.feature_vector - mu) @ V.T)
+                ys.append(d)
+                if v.t <= it.spoil_lo + 1e-9 and v.t < it.spoil_hi - 1e-9:  # not avo13-15's spoiled first photo
+                    unsp.append(d)
+        lib = [it for it in train if np.isfinite(it.spoil_hi) and it.spoil_hi > it.spoil_lo]
+        if not lib or not ys:
+            raise ValueError("storage-day model needs training photos and fruit with a known spoilage interval")
+        days = np.unique(np.round(np.concatenate([ys, unsp]), 3))
+        Z, y = np.asarray(xs, np.float64).reshape(len(xs), V.shape[0]), np.searchsorted(days, np.round(ys, 3))
+        K, q = len(days), Z.shape[1]
+        Zs = Z.std(0) + 1e-6
+        Zn = np.c_[Z / Zs, np.ones(len(Z))]
+        Y = np.eye(K)[y]
+
+        def fit_w(ridge: float) -> np.ndarray:
+            def f(wf):
+                Wm = wf.reshape(q + 1, K)
+                L = Zn @ Wm
+                L = L - L.max(1, keepdims=True)
+                lse = np.log(np.exp(L).sum(1))
+                P = np.exp(L - lse[:, None])
+                reg = ridge * np.sum(Wm[:-1] ** 2)
+                grad = Zn.T @ (P - Y) + 2 * ridge * np.r_[Wm[:-1], 0 * Wm[-1:]]
+                return -np.sum(Y * (L - lse[:, None])) + reg, grad.ravel()
+
+            r = minimize(f, np.zeros((q + 1) * K), jac=True, method="L-BFGS-B")
+            Wm = r.x.reshape(q + 1, K)
+            Wm[:-1] /= Zs[:, None]  # back to unscaled PCA coordinates
+            return Wm
+
+        cnt_t = np.bincount(y, minlength=K) + 0.5
+        cnt_p = np.array([np.sum(np.isclose(unsp, d)) for d in days], float)
+        log_prior = np.where(cnt_p > 0, np.log(np.maximum(cnt_p, 1e-12) / cnt_p.sum()), -1e9)
+        lo = np.array([_storage_days(it)[0] + it.spoil_lo for it in lib])
+        hi = np.array([_storage_days(it)[0] + it.spoil_hi for it in lib])
+        base = eqx.tree_at(
+            lambda s: (s.mu, s.V, s.days, s.log_ptrain, s.log_prior, s.lib_lo, s.lib_hi),
+            self,
+            tuple(jnp.asarray(a, jnp.float32) for a in (mu, V, days, np.log(cnt_t / cnt_t.sum()), log_prior, lo, hi)),
+        )
+        vitems = all_starts(val, cfg.random_start_max) if (val and getattr(cfg, "random_start", False)) else val
+        vb = _instances(vitems, info) if vitems else None
+        best, best_s = (1.0, 1.0), np.inf
+        pred = eqx.filter_jit(lambda mm, b, tt: mm._cdf(b, tt))
+        for ridge in (0.1, 1.0, 10.0, 100.0):
+            mm = eqx.tree_at(lambda s: s.W, base, jnp.asarray(fit_w(ridge), jnp.float32))
+            if vb is None:
+                best, best_mm = (ridge, 1.0), mm
+                break
+            vhi = np.where(np.asarray(vb.right_censored), np.inf, np.asarray(vb.hi_rel))
+            for temp in (0.1, 0.25, 0.5, 1.0):
+                F = np.asarray(pred(mm, vb, jnp.asarray(temp, jnp.float32)))
+                sc = float(np.mean(censored_log_score(F, np.asarray(vb.lo_rel), vhi)))
+                if sc < best_s:
+                    best, best_s, best_mm = (ridge, temp), sc, mm
+        print(f"storage day: {K} day classes {days.tolist()}, {len(ys)} training photos, {len(lib)} library fruit, "
+              f"ridge {best[0]}, temp {best[1]} (val log score {best_s:.3f})", flush=True)  # fmt: skip
+        return eqx.tree_at(lambda s: s.temp, best_mm, jnp.asarray(best[1], jnp.float32))

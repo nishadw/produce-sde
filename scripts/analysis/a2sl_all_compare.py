@@ -28,8 +28,10 @@ OBSERVED = ["avo01", "avo02", "avo03", "avo08", "avo09", "avo10", "avo11", "avo1
 N_RUNS = 12 * 5  # folds x seeds
 pc.TRACKED, pc.SPLIT = tuple(ALL), "test"
 pc.POP = POP = (GRID, "matching_time_synth-real_start-random")
+MODELS = {**pc.MODELS, "storage_day": "Storage day"}  # photo -> storage day (ripen.models.classical.StorageDay)
 SECTIONS = ("Reference", "Date only (no images)", "Photo", "Photo-only model taught by a teacher during training")
-CURVE_ROWS = [("Latent SDE", "photo"), ("Latent ODE", "photo"), ("Transformer", "photo"),
+CURVE_ROWS = [("Image matching", "photo"), ("Storage day", "photo"),
+              ("Latent SDE", "photo"), ("Latent ODE", "photo"), ("Transformer", "photo"),
               ("Latent SDE", "SAMD, teacher sees photo + scanner"),
               ("Transformer", "CAML-KD, teacher sees photo only")]  # fmt: skip
 
@@ -39,16 +41,18 @@ def complete(spec: tuple) -> bool:
 
 
 def rows() -> list[dict]:
+    """Every completed run. The teacher on its own is left out: it needs the scanner at test time, so it is not a
+    photo-only forecast (user, 2026-11-21)."""
     def g(m, inp):
         return (GRID, f"{m}_{inp}_synth-real_start-random")
 
     out = [{"section": SECTIONS[0], "model": "No-photo forecast", "sees": "date only", "spec": POP}]
     out += [{"section": SECTIONS[1], "model": lab, "sees": "date only", "spec": g(m, "time")}
-            for m, lab in pc.MODELS.items() if m != "matching"]  # fmt: skip
+            for m, lab in MODELS.items() if m != "matching"]  # fmt: skip
     out += [{"section": SECTIONS[2], "model": lab, "sees": "photo", "spec": g(m, "photo")}
-            for m, lab in pc.MODELS.items()]  # fmt: skip
+            for m, lab in MODELS.items()]  # fmt: skip
     out += [{"section": SECTIONS[3], "model": pc.MODELS[m], "sees": d, "spec": (AML, f"{m}_{me}_viewall")}
-            for m in pc.TAUGHT for me, d in pc.METHODS.items()]  # fmt: skip
+            for m in pc.TAUGHT for me, d in pc.METHODS.items() if me != "teacher"]  # fmt: skip
     return [r for r in out if complete(r["spec"])]
 
 
@@ -87,7 +91,7 @@ def main() -> None:
             c = pc.compare(po, only(pop, OBSERVED))
             rec["vs"], rec["vs_all"] = c, pc.compare(pf, pop)
             vs, wins = pc.verdict(c), f"{c['wins']}/{n}"
-            if r["model"] != "Image matching" and r["sees"] != "date only":
+            if r["sees"] != "date only":
                 bpf, ws = pc.per_forecast(r["spec"], blend=True)
                 rec["blend"], rec["w"] = pc.summary(only(bpf, OBSERVED))[0], ws
                 blend = f"{rec['blend']:.2f} ({np.median(ws):.2f})"

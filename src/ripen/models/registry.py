@@ -7,7 +7,7 @@ import dataclasses
 import jax
 
 from ..data.collate import DatasetInfo
-from .classical import TemporalMatching, WeibullAFT
+from .classical import StorageDay, TemporalMatching, WeibullAFT
 from .latent import LatentDynamics
 from .sequence import SequenceSurvival
 
@@ -56,6 +56,9 @@ MODEL_REGISTRY = {
         cfg.get("k_visits", 3),
         cfg.get("tol", 1.01),
         cfg.get("eps", 0.05),
+    ),
+    "storage_day": lambda cfg, info, key: StorageDay(
+        info.feat_dim, cfg["horizon"], cfg.get("pca", 8), cfg.get("tol", 1.01), cfg.get("eps", 0.02)
     ),
 }
 

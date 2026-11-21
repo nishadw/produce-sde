@@ -1,0 +1,6 @@
+# Storage-day model (ripen.models.classical.StorageDay): photo -> storage day, then the training fruit's spoilage days.
+name: storage_day
+horizon: ${horizon}
+pca: 8        # photos in this many PCA components of the training photos
+tol: 1.01     # a visit's day must fall within this many days of a training day class
+eps: 0.02     # weight of the prior-only forecast (keeps every forecast proper)

@@ -3,7 +3,7 @@ matching). Each is an :class:`eqx.Module` with ``loss(batch, key)`` and
 ``predict_cdf(batch, key)``."""
 
 from .base import ShelfLifeModel
-from .classical import TemporalMatching, WeibullAFT
+from .classical import StorageDay, TemporalMatching, WeibullAFT
 from .clock import ArrheniusClock, FixedClock, GroupClock, make_clock
 from .latent import LatentDynamics
 from .registry import MODEL_REGISTRY, build_model
@@ -15,6 +15,7 @@ __all__ = [
     "GroupClock",
     "LatentDynamics",
     "MODEL_REGISTRY",
+    "StorageDay",
     "SequenceSurvival",
     "TemporalMatching",
     "WeibullAFT",
