@@ -78,7 +78,7 @@ def bullet(text, lead=None, style="List Bullet"):
     p.paragraph_format.space_after = Pt(2)
 
 
-def table(hdr, rows, widths, size=9, highlight=None):
+def table(hdr, rows, widths, size=9, highlight=None, gap=True):
     t = doc.add_table(rows=len(rows) + 1, cols=len(hdr))
     t.style, t.alignment, t.autofit = "Table Grid", WD_TABLE_ALIGNMENT.CENTER, False
     layout = OxmlElement("w:tblLayout")
@@ -96,6 +96,7 @@ def table(hdr, rows, widths, size=9, highlight=None):
             c.text = ""
             p = c.paragraphs[0]
             p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.keep_with_next = i < len(rows)  # keep a table on one page
             run = p.add_run(str(val))
             run.font.size = Pt(size)
             run.bold = i == 0 or j == 0
@@ -103,7 +104,8 @@ def table(hdr, rows, widths, size=9, highlight=None):
                 shade(c, "DCE6F2")
             elif highlight is not None and i - 1 == highlight:
                 shade(c, "E3F0DC")
-    doc.add_paragraph().paragraph_format.space_after = Pt(0)
+    if gap:
+        doc.add_paragraph().paragraph_format.space_after = Pt(0)
 
 
 # =====================================================================================================================
@@ -166,13 +168,18 @@ def row(model, sees, label):
 
 
 TEACH = "teacher sees photo + scanner"
-rows = [row("No-photo forecast", "date only", "no photo (reference)"), row("Image matching", "photo", "photo")]
-for m in ("Transformer", "Latent SDE", "Latent ODE"):
-    rows += [row(m, "photo", "photo"), row(m, f"CAML-KD, {TEACH}", "photo + CAML-KD"),
-             row(m, f"SAMD, {TEACH}", "photo + SAMD")]
-table(["Model", "Trained with", "Score", "vs no-photo", "Fruit better", "Day error"], rows,
-      [1.25, 1.55, 0.6, 1.1, 0.9, 0.8], size=8.5)  # fmt: skip
-para("Day error = days between predicted and actual spoil day.", size=8.5, color=GREY, after=4)
+HDR = ["Trained with", "Score", "vs no-photo", "Fruit better", "Day error"]
+WIDTHS = [1.7, 0.7, 1.2, 1.0, 0.9]
+GROUPS = [("No-photo forecast (reference)", [row("No-photo forecast", "date only", "no photo")]),
+          ("Image matching", [row("Image matching", "photo", "photo")])]
+GROUPS += [(m, [row(m, "photo", "photo"), row(m, f"CAML-KD, {TEACH}", "photo + CAML-KD"),
+                row(m, f"SAMD, {TEACH}", "photo + SAMD")]) for m in ("Transformer", "Latent SDE", "Latent ODE")]
+for title, rs in GROUPS:
+    sub(title)
+    table(HDR, [r[1:] for r in rs], WIDTHS, size=8.5, gap=False)
+para("Day error = days between predicted and actual spoil day. CAML-KD and SAMD use a teacher that also sees the "
+     "scanner.", size=8.5, color=GREY, after=4)  # fmt: skip
+doc.paragraphs[-1].paragraph_format.space_before = Pt(3)
 for lead, text in (
     ("Nothing beats the no-photo forecast yet. ", f"Image matching comes closest ({MATCH['obs']:.2f} vs {REF:.2f}), "
      f"better on {MATCH['vs']['wins']} of 8 fruit but badly wrong on two."),
