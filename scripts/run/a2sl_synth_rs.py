@@ -20,8 +20,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from a2sl_views import HIDDEN_ARGS, MODEL_ARGS, folds_for  # noqa: E402
 
 # the two fit-directly baselines (ripen.models.classical) take no extra arguments
-MODEL_ARGS = {**MODEL_ARGS, "weibull": ["model=weibull"], "matching": ["model=matching"],
-              "storage_day": ["model=storage_day"]}
+MODEL_ARGS = {
+    **MODEL_ARGS,
+    "weibull": ["model=weibull"],
+    "matching": ["model=matching"],
+    "storage_day": ["model=storage_day"],
+}
 HIDDEN_ARGS = {**HIDDEN_ARGS, "weibull": [], "matching": [], "storage_day": []}
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,15 +48,18 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3, 4, 5])
     ap.add_argument("--folds", type=int, nargs="*", default=None)
     ap.add_argument("--out", default="outputs/a2sl_synth_rs")
+    ap.add_argument("--features", default=None, help="photo feature cache (default: the data config's ResNet-18)")
+    ap.add_argument("--tag", default="", help="appended to the run name, e.g. _fruit for another feature cache")
     ap.add_argument("extra", nargs="*", help="extra Hydra overrides (smoke tests)")
     a = ap.parse_args()
     n_folds, fold_path = folds_for(a.split)
     a.folds = list(range(n_folds)) if a.folds is None else a.folds
-    name = run_name(a.model, a.input, a.synth, a.start)
+    name = run_name(a.model, a.input, a.synth, a.start) + a.tag
     margs = [x for x in MODEL_ARGS[a.model] if not x.startswith("model.posterior_guidance")] + HIDDEN_ARGS[a.model]
     run_args = [*INPUTS[a.input], "data.scan_standardize=true", "data.eval_all_starts=true",
                 f"train.random_start={'true' if a.start == 'random' else 'false'}"]  # fmt: skip
     run_args += [] if a.synth == "real" else [f"data.synthetic={a.synth}"]
+    run_args += [f"data.features_file={a.features}"] if a.features else []
     fail = 0
     for s in a.seeds:
         for k in a.folds:
