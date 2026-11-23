@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 source scripts/run/_snap.sh
-feat=$(sub op-features "python scripts/data/one_photo_features.py" -c 8 --mem=32G -t 4:00:00)
+feat=$(sub op-features "python scripts/data/one_photo_features.py" -c 4 --mem=32G -t 8:00:00)
 echo "features: $feat"
 ids=()
 for f in full fruit colour; do
