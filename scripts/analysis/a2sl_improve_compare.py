@@ -118,7 +118,7 @@ def main() -> None:
         for name, spec in variants:
             if not ac.complete(spec):
                 continue
-            raw = pc.summary(ac.only(pc.per_forecast(spec)[0], ac.OBSERVED))[0]
+            raw, raw_mae = pc.summary(ac.only(pc.per_forecast(spec)[0], ac.OBSERVED))
             pf, ch = recalibrated(spec)
             po = ac.only(pf, ac.OBSERVED)
             cal, mae = pc.summary(po)
@@ -127,7 +127,9 @@ def main() -> None:
             T = float(np.median([v[0] for v in ch.values() if v[1] < 1])) if w < 1 else float("nan")
             md.append(f"| {name} | {raw:.2f} | {cal:.2f} | {pc.verdict(c)} | {c['wins']} of 8 | {mae:.1f} d | "
                       f"{'—' if np.isnan(T) else f'{T:g}'} / {w:.1f} |")  # fmt: skip
-            res["models"][lab].append({"features": name, "raw": raw, "cal": cal, "mae": mae, "vs": c, "T": T, "w": w})
+            res["models"][lab].append(
+                {"features": name, "raw": raw, "raw_mae": raw_mae, "cal": cal, "mae": mae, "vs": c, "T": T, "w": w}
+            )
         md.append("")
     text = "\n".join(md) + "\n"
     (OUT / "summary.md").write_text(text)
