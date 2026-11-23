@@ -29,8 +29,9 @@ def verdict(r):
 
 
 def rows(model):
-    return [[FEAT[r["features"]], f"{r['raw']:.2f}", f"{r['cal']:.2f}", verdict(r), f"{r['vs']['wins']} of 8",
-             f"{r['mae']:.1f} d"] for r in S["models"][model]]  # fmt: skip
+    ref = [["No photo (reference)", f"{REF:.2f}", "—", "—", "—", f"{REF_MAE:.1f} d"]]
+    return ref + [[FEAT[r["features"]], f"{r['raw']:.2f}", f"{r['cal']:.2f}", f"{r['w']:.0%}", verdict(r),
+                   f"{r['mae']:.1f} d"] for r in S["models"][model]]  # fmt: skip
 
 
 col = next(r for r in S["models"]["Image matching"] if r["features"].startswith("skin"))
@@ -53,8 +54,10 @@ for lead, text in (
      "the skin is (average, spread, darkest and lightest parts), from fruit pixels only."),
     ("Public reader. ", "A ripeness-stage reader trained on the 478 public avocados (1 = unripe to 5 = overripe), "
      "then applied to the lab photos."),
-    ("Recalibration. ", "Each forecast is made more or less confident, and partly mixed with the no-photo forecast. "
-     "How much is chosen on the other 11 fruit, never on the fruit being scored."),
+    ("Recalibration. ", "A model's odds can be too sure (or not sure enough). Recalibration turns two knobs on "
+     "each forecast after training: (a) sharpen or flatten its odds, and (b) blend it with the no-photo forecast, "
+     "e.g. 70 % model + 30 % no-photo. Both knobs are set on the other 11 fruit, never on the fruit being scored. "
+     "If the blend ends at 100 % no-photo, the photos added nothing."),
 ):  # fmt: skip
     bullet(text, lead=lead)
 
@@ -65,17 +68,19 @@ para("Lab photos (left) sit on a paper background whose colour and lighting chan
      size=8.5, after=4)  # fmt: skip
 
 doc.add_heading("3. Results", level=1)
-para(f"Lab avocados, real photos; scored on the 8 fruit seen before and after spoiling. No-photo forecast: "
-     f"{REF:.2f}, day error {REF_MAE:.1f} d.", size=9.5, after=3)  # fmt: skip
-HDR = ["Photo features", "As trained", "Recalibrated", "vs no-photo", "Fruit better", "Day error"]
-WIDTHS = [1.6, 0.85, 0.95, 1.4, 0.9, 0.8]
+para("Lab avocados, real photos only (no linear or logistic extrapolation, unlike the 18 Nov half-synthetic study); "
+     "scored on the 8 fruit seen before and after spoiling. Score: low when the forecast puts high odds on the "
+     "actual spoil window; sure-but-wrong odds are penalised hard.", size=9.5, after=3)  # fmt: skip
+HDR = ["Photo features", "As trained", "Recalibrated", "No-photo share", "vs no-photo", "Day error"]
+WIDTHS = [1.6, 0.8, 0.9, 1.0, 1.4, 0.8]
 for model in ("Image matching", "Transformer", "Latent SDE", "Latent ODE"):
     sub(model)
-    best = 2 if model == "Image matching" else None
+    best = 3 if model == "Image matching" else None
     table(HDR, rows(model), WIDTHS, size=8.5, highlight=best, gap=False)
-para("\"vs no-photo\", \"Fruit better\" and \"Day error\" are for the recalibrated forecast. \"Same\" means "
-     "recalibration chose the no-photo forecast alone, i.e. the photos added nothing. CAML-KD and SAMD were run on "
-     "the original photos only.", size=8.5, after=4)  # fmt: skip
+para("No-photo share: how much of the recalibrated forecast is the no-photo forecast (typical value over the 12 "
+     "fruit). \"vs no-photo\" (statistical test across fruit) and \"Day error\" (days between predicted and "
+     "actual spoil day) are for the recalibrated forecast; \"same\" means it is 100 % no-photo. CAML-KD and SAMD "
+     "were run on the original photos only.", size=8.5, after=4)  # fmt: skip
 doc.paragraphs[-1].paragraph_format.space_before = Pt(3)
 
 doc.add_heading("4. What we learned", level=1)
