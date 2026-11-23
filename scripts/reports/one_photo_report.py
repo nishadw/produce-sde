@@ -47,9 +47,10 @@ for lead, text in (
      "learns from the stage ratings during training, never at prediction time."),
     ("Trained on the public avocados. ", "334 fruit (about 4,100 photos) train, 71 pick settings, 73 (905 photos) "
      "are the test. The 15 lab avocados (42 photos; 3 were already spoiled in their first photo) are a second test "
-     "from a different camera and room; they never train."),
-    ("Three photo variants. ", "Full photo, fruit only (background removed) and skin colour (12 numbers), "
-     "each read the same way for public and lab photos."),
+     "from a different camera and room; they never train. Spoiled means the public study's own end of shelf "
+     "life: stage 5 of its ripeness scale (mold spots, skin separating from the flesh), rated daily."),
+    ("Three photo variants. ", "Full photo; fruit only (background removed from every photo, public and lab "
+     "alike); and skin colour (12 numbers from the fruit pixels only)."),
     ("Four models. ", "Image matching, transformer (with one photo in, a direct photo-to-days network), latent SDE "
      "and latent ODE. Matching ran once; the others with 3 random seeds, averaged."),
 ):  # fmt: skip
@@ -88,10 +89,11 @@ for lead, text in (
      "skin is about 2 standard deviations darker than the average public photo, far from what it learned."),
     ("Dark skin is the hard case. ", "Public avocados turn black just before spoiling; the lab ones were black by "
      "day 3 and lasted 4 to 6 more days. Models trained on public photos call dark lab fruit nearly spoiled."),
-    ("Fridge or counter matters. ", "Fruit kept at 10 °C are hardest (2.4 to 4.0 days off, against 1.2 to 2.8 at "
-     "20 °C): a photo cannot tell where the fruit will be kept."),
-    ("Uncertainty: ", "the latent SDE's 80 % ranges are too wide on the public fruit (right 98 % of the time); "
-     "image matching's are too narrow on the lab fruit (48 to 73 %)."),
+    ("Fridge or counter matters. ", "The public fruit were stored at 10 °C, 20 °C or room temperature. The 10 °C "
+     "fruit are hardest (2.4 to 4.0 days off, against 1.2 to 2.8 at 20 °C): a photo cannot tell where the fruit "
+     "will be kept."),
+    ("For reference: ", "the public study's authors report about 1 day off (Xavier et al., Foods 2024), but their "
+     "method is told the storage temperature and keeps the better of the two photos of each fruit."),
 ):  # fmt: skip
     bullet(text, lead=lead)
 
@@ -101,8 +103,7 @@ for text in (
     "inside the fruit, which matters most once the skin is black. The app still needs only a photo.",
     "Fine-tune the public model on the lab avocados (each fruit held out in turn).",
     "Colour correction against the background, so skin colour means the same under any light.",
-    "Optionally, one tap in the app, fridge or counter (not a date), for the 10 °C case.",
-    "Then revisit recalibration.",
+    "Optionally, one tap in the app, fridge or counter (not a date), for the 10 °C case. Then revisit recalibration.",
 ):  # fmt: skip
     bullet(text)
 
