@@ -41,3 +41,14 @@ photos, lab 15 fruit / 42 photos (3 photographed already spoiled).
 - Lab avocados go black by day 3 and last 4-6 more days; public-trained models call them nearly spoiled.
 - 10 °C fruit hardest (2.4-4.0 d vs 1.2-2.8 d at 20 °C). SDE ranges too wide on public (98 %).
 - Lab seed spread is large (e.g. latent SDE colour lab score 1.52-2.38); 15 lab fruit only.
+
+## Phase 2: microwave teacher (submitted 2026-11-23)
+
+- `scripts/run/one_photo_teacher.py`: start from each phase-1 public model; fine-tune on lab avocados, leave one of
+  avo01-12 out (val: two of avo08/09/10/12, never scanned, so every scanned fruit trains; avo13-15 always train).
+- Only 20 lab photos have scans (avo01/02/03/11 every visit; one each for avo04-07). Teacher terms on those only.
+- Methods: `finetune` (photo, no teacher: the control), `teacher` (public model widened to photo + scan, zero-init
+  scan inputs; needs scanner), `kd` (CAML 0.1 task + 0.9 KD, t 4), `kd_photo` (control: photo-only teacher), `samd`.
+- Models latent SDE / transformer / latent ODE x fruit-only / skin colour x 3 seeds: jobs 8540149-8540166, summary
+  8540167 -> `outputs/one_photo_teacher/summary.md` (`scripts/analysis/one_photo_teacher_compare.py`).
+- Mangoes not used yet (the student is an avocado app).
