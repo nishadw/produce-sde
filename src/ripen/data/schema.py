@@ -207,3 +207,21 @@ def paired_random_start(
     return [shift_start(it, k) for it, k in zip(items, ks, strict=True)], [
         shift_start(p, k) for p, k in zip(partners, ks, strict=True)
     ]
+
+
+def one_photo(items: list[Item], hide_stages: bool = False, storage: str = "any", temp_c: float = 20.0) -> list[Item]:
+    """The app setting: one photo in, days until spoiled out. Every unspoiled visit of every item becomes its own item
+    ``<id>@<k>`` with that single visit at ``t = 0`` and the spoilage interval in days from it. Storage group and
+    temperature are set to the same ``storage`` / ``temp_c`` for every item, so no model can use them (an app user's
+    photo carries neither); ``hide_stages`` drops the ripeness-stage labels (test items: only the photo is known).
+    The original fruit, storage group and photo day are kept in ``meta``."""
+    out = []
+    for it in items:
+        for k, v in enumerate(it.visits):
+            if v.t > it.spoil_lo + 1e-9:  # spoiled (or past the last unspoiled visit): nothing to forecast
+                break
+            vis = replace(v, t=0.0, stage=None if hide_stages else v.stage)
+            meta = {**it.meta, "fruit": it.item_id, "storage_orig": it.storage, "photo_t": v.t, "visit": k}
+            out.append(Item(f"{it.item_id}@{k}", it.produce, storage, temp_c, [vis], it.spoil_lo - v.t,
+                            it.spoil_hi - v.t, rh=it.rh, meta=meta))  # fmt: skip
+    return out
