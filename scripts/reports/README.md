@@ -18,6 +18,7 @@ summaries exist in `outputs/`.
 | `2026-11-19_all-avocados-real-photos.docx` | `scripts/analysis/a2sl_all_compare.py`, `all_figs.py`, then `all_report.py` |
 | `2026-11-21_progress-report.docx` | `scripts/analysis/a2sl_all_compare.py`, `all_figs.py`, then `progress_report.py` |
 | `2026-11-22_background-removal.docx` | `scripts/analysis/a2sl_improve_compare.py`, `fruit_mask_figure.py`, then `improve_report.py` (styles in `_docstyle.py`) |
+| `2026-11-23_one-photo-phase1.docx` | `scripts/run/submit_one_photo.sh` (runs + `scripts/analysis/one_photo_compare.py`), `one_photo_figure.py --run latent_sde_fruit --seed 2`, then `one_photo_report.py` |
 | `2026-11-14_repo-audit.docx` | `audit_report.py` (hand-written; no charts) |
 
 Example:

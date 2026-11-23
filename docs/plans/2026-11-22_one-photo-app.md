@@ -20,3 +20,24 @@ ripeness-stage label. No date-only forecast and no blending toward one. Recalibr
 
 **Phase 2 (next).** Fine-tune on the lab avocados and add the microwave scans as a training-only teacher
 (CAML-KD, SAMD): the app never needs a scanner. Colour correction against the background. Recalibration revisited.
+
+## Phase 1 results (2026-11-23)
+
+All 31 jobs completed (`outputs/one_photo/summary.md`). Fruit-weighted, mean over seeds; public test 73 fruit / 905
+photos, lab 15 fruit / 42 photos (3 photographed already spoiled).
+
+| Model / photo | Public score | Public day error | Lab score | Lab day error | Lab 80 % range |
+|---|---|---|---|---|---|
+| Matching, skin colour | 1.90 | 2.2 d | 3.96 | 2.4 d | 48 % |
+| Transformer, skin colour | 1.80 | 2.4 d | 3.27 | 9.1 d | 52 % |
+| Transformer, fruit only | 1.88 | 2.7 d | 3.56 | 2.1 d | 45 % |
+| Latent SDE, fruit only | 2.23 | 2.8 d | 2.56 | 1.9 d | 73 % |
+| Latent SDE, skin colour | 2.27 | 2.8 d | 1.84 | 2.4 d | 80 % |
+| Latent ODE, fruit only | 2.77 | 3.0 d | 2.41 | 2.1 d | 63 % |
+
+- Public: every model 2.2-3.2 days off; skin colour best for transformer and matching.
+- Background removal barely matters on public photos (white background) but lowers lab day error for every model.
+- Latent SDE transfers best to the lab; transformer on colour breaks (lab skin ~2 SD darker than the public mean).
+- Lab avocados go black by day 3 and last 4-6 more days; public-trained models call them nearly spoiled.
+- 10 °C fruit hardest (2.4-4.0 d vs 1.2-2.8 d at 20 °C). SDE ranges too wide on public (98 %).
+- Lab seed spread is large (e.g. latent SDE colour lab score 1.52-2.38); 15 lab fruit only.

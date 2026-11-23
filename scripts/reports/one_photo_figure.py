@@ -43,11 +43,11 @@ def main() -> None:
         b.set_xlabel("days from photo", fontsize=8)
         b.tick_params(labelsize=7)
         b.spines[["top", "right"]].set_visible(False)
-        b.set_title(f"says ~{med} days; actually {int(lo) + 1}–{int(hi)}", fontsize=8.5)
+        b.set_title(f"says ~{med} day{'' if med == 1 else 's'}; actually {int(lo) + 1}–{int(hi)}", fontsize=8.5)
         if j == 0:
             b.set_ylabel("odds of spoiling that day", fontsize=8)
     fig.tight_layout()
-    out = FIGS / "one_photo_examples.png"
+    out = FIGS / f"one_photo_examples_{a.run}.png"
     fig.savefig(out, dpi=200)
     print("wrote", out)
 
