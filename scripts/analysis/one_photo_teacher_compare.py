@@ -5,19 +5,20 @@ photos and scored like phase 1 (censored log score, day error, 80 % range covera
 then averaged over seeds. "Public only" is the phase-1 model with no lab fine-tune, scored on the same 12 fruit.
 "Scanned 4" restricts to avo01/02/03/11, the fruit scanned at every visit.
 
-python scripts/analysis/one_photo_teacher_compare.py  -> outputs/one_photo_teacher/{summary.md,summary.json}
+python scripts/analysis/one_photo_teacher_compare.py [root]  -> <root>/{summary.md,summary.json}
 """
 
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 
 from ripen.eval.metrics import censored_log_score, compute_metrics
 
-ROOT = Path("outputs/one_photo_teacher")
+ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "outputs/one_photo_teacher")  # or ..._fill_linear / _logistic
 P1 = Path("outputs/one_photo")
 MODELS = {"transformer": "Transformer", "latent_sde": "Latent SDE", "latent_ode": "Latent ODE"}
 FEATS = {"fruit": "Fruit only", "colour": "Skin colour"}

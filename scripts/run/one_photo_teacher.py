@@ -11,6 +11,8 @@ Methods (fold<k>/<method>/):
   kd         CAML: student fine-tuned with 0.1 task + 0.9 t^2 KL(teacher || student), t = 4, on scanned photos only
   kd_photo   control: the same, but the teacher is the photo-only fine-tune (any gain here is not from the scans)
   samd       SAMD: teacher reset from the student every round, shared predictor, feature MSE on scanned photos
+``--fill linear|logistic``: the training fruit are extended with regression-extrapolated photos and scans
+(``ripen.data.a2sl_synth``, fit on the training fruit only); validation and test stay real. kd_photo is skipped.
 
 python scripts/run/one_photo_teacher.py --model latent_sde --features fruit --seed 1 [--folds 0 1]
 Writes outputs/one_photo_teacher/<model>_<features>/seed<s>/fold<k>/<method>/{metrics,predictions}_test.*
@@ -30,6 +32,7 @@ import numpy as np
 from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
 
+from ripen.data.a2sl_synth import build_half_synthetic
 from ripen.data.schema import one_photo
 from ripen.models import build_model
 from ripen.pipeline import build_from_run, dataset_info, evaluate_and_write, load_items
@@ -75,6 +78,12 @@ def run_fold(a, k: int) -> None:
     lab = load_items(lab_cfg)
     sp = fold_split(k)
     pick = {s: [it for it in lab if it.item_id in sp[s]] for s in sp}
+    if a.fill != "none":  # training fruit only: the regression never sees the test or validation fruit
+        syn = build_half_synthetic(pick["train"], a.fill, photo_dim=dim, has_scans=True,
+                                   manifests=lab_cfg.get("manifests", "data/manifests"))  # fmt: skip
+        ids = {it.item_id for it in syn}
+        pick["train"] = syn + [it for it in pick["train"] if it.item_id not in ids]
+        print(f"   {a.fill} fill: {len(ids)} training fruit extrapolated to day 15", flush=True)
     tr_t, va_t = one_photo(pick["train"]), one_photo(pick["val"])
     te_t = one_photo(pick["test"], hide_stages=True)
     tr_s, va_s, te_s = ([photo_only(it, dim) for it in x] for x in (tr_t, va_t, te_t))
@@ -103,7 +112,7 @@ def run_fold(a, k: int) -> None:
         print(f"   {m:9s} MAE {o['mae']:.2f}  CRPS {o['crps']:.2f}  cov80 {o['coverage80']:.2f}", flush=True)
 
     finetuned = None
-    if not done("finetune") or not done("kd_photo"):
+    if not done("finetune") or (a.fill == "none" and not done("kd_photo")):
         finetuned, _ = train(public, tr_s, va_s, info_s, tcfg, kf)
         if not done("finetune"):
             write("finetune", finetuned, info_s, te_s)
@@ -117,7 +126,7 @@ def run_fold(a, k: int) -> None:
     if not done("kd"):
         m, _ = train_distill(public, teacher, tr_s, va_s, t_by_id, info_s, info_t, tcfg, kk, spec=spec, has_aux=has_aux)
         write("kd", m, info_s, te_s)
-    if not done("kd_photo"):
+    if a.fill == "none" and not done("kd_photo"):
         m, _ = train_distill(public, finetuned, tr_s, va_s, s_by_id, info_s, info_s, tcfg, kp, spec=spec,
                              has_aux=has_aux)  # fmt: skip
         write("kd_photo", m, info_s, te_s)
@@ -139,8 +148,16 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=100)
     ap.add_argument("--patience", type=int, default=15)
     ap.add_argument("--rounds", type=int, default=12)
-    ap.add_argument("--out", default="outputs/one_photo_teacher")
+    ap.add_argument(
+        "--fill",
+        choices=["none", "linear", "logistic"],
+        default="none",
+        help="extend the training fruit with regression-extrapolated photos/scans (half-synthetic set)",
+    )
+    ap.add_argument("--out", default=None, help="default outputs/one_photo_teacher[_fill_<fill>]")
     a = ap.parse_args()
+    if a.out is None:
+        a.out = "outputs/one_photo_teacher" + ("" if a.fill == "none" else f"_fill_{a.fill}")
     folds = list(range(len(TEST_FRUIT))) if a.folds is None else a.folds
     if len(folds) == 1:
         run_fold(a, folds[0])
@@ -148,7 +165,7 @@ def main() -> None:
     # one process per fold: on CPU, XLA never frees compiled code and the distillation steps are rebuilt per fold
     base = [sys.executable, __file__, "--model", a.model, "--features", a.features, "--seed", str(a.seed), "--lr",
             str(a.lr), "--epochs", str(a.epochs), "--patience", str(a.patience), "--rounds", str(a.rounds), "--out",
-            a.out]  # fmt: skip
+            a.out, "--fill", a.fill]  # fmt: skip
     fail = 0
     for k in folds:
         fail |= subprocess.run([*base, "--folds", str(k)], cwd=ROOT).returncode != 0
