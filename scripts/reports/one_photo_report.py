@@ -12,12 +12,15 @@ from docx.shared import Inches, Pt
 S = json.loads((REPO / "outputs" / "one_photo" / "summary.json").read_text())
 OUT = RESULTS / "2026-11-23_one-photo-phase1.docx"
 MODELS = ("Image matching", "Transformer", "Latent SDE", "Latent ODE")
+FEATS = ("Full photo", "Fruit only")  # the skin-colour variant is not presented
 FIG = FIGS / "one_photo_examples_latent_sde_fruit.png"
 
 
 def rows(model):
     out = []
     for feat, r in S[model].items():
+        if feat not in FEATS:
+            continue
         p, q = r["public"], r["lab"]
         out.append([feat, f"{p['score']:.2f}", f"{p['mae']:.1f} d", f"{p['cov80']:.0%}", f"{q['score']:.2f}",
                     f"{q['mae']:.1f} d", f"{q['cov80']:.0%}"])  # fmt: skip
@@ -25,7 +28,7 @@ def rows(model):
 
 
 def best_row(model):
-    feats = list(S[model])
+    feats = [f for f in S[model] if f in FEATS]
     return min(range(len(feats)), key=lambda i: S[model][feats[i]]["public"]["score"])
 
 
@@ -49,8 +52,8 @@ for lead, text in (
      "are the test. The 15 lab avocados (42 photos; 3 were already spoiled in their first photo) are a second test "
      "from a different camera and room; they never train. Spoiled means the public study's own end of shelf "
      "life: stage 5 of its ripeness scale (mold spots, skin separating from the flesh), rated daily."),
-    ("Three photo variants. ", "Full photo; fruit only (background removed from every photo, public and lab "
-     "alike); and skin colour (12 numbers from the fruit pixels only)."),
+    ("Two photo variants. ", "Full photo, and fruit only (background removed from every photo, public and lab "
+     "alike)."),
     ("Four models. ", "Image matching, transformer (with one photo in, a direct photo-to-days network), latent SDE "
      "and latent ODE. Matching ran once; the others with 3 random seeds, averaged."),
 ):  # fmt: skip
@@ -78,19 +81,15 @@ doc.paragraphs[-1].paragraph_format.space_before = Pt(3)
 
 doc.add_heading("4. What we learned", level=1)
 for lead, text in (
-    ("A photo alone gets within 2 to 3 days. ", "On the 73 held-out public avocados every model is off by 2.2 to "
-     "3.2 days on average. Skin colour is best for the transformer (score 1.80) and image matching (2.2 days); the "
-     "gaps between the top models are small."),
+    ("A photo alone gets within about 3 days. ", "On the 73 held-out public avocados every model is off by 2.7 "
+     "to 3.1 days on average. The transformer scores best (1.83, full photo); the gaps between models are small."),
     ("Removing the background matters most in a new setting. ", "On the public photos (plain white background) it "
      "changes little. On the lab photos it cuts the day error for every model: matching 2.3 to 2.0, transformer 4.2 "
-     "to 2.1, latent SDE 3.8 to 1.9, latent ODE 2.8 to 2.1 days."),
-    ("The latent SDE transfers best to the lab. ", "It has the best lab score (1.84, skin colour) and its 80 % "
-     "ranges hold on the lab fruit (73 to 80 %). The transformer on skin colour breaks there (9.1 days off): lab "
-     "skin is about 2 standard deviations darker than the average public photo, far from what it learned."),
+     "to 2.1, latent SDE 3.8 to 1.9, latent ODE 2.8 to 2.1 days. The latent SDE ends up closest on the lab fruit."),
     ("Dark skin is the hard case. ", "Public avocados turn black just before spoiling; the lab ones were black by "
      "day 3 and lasted 4 to 6 more days. Models trained on public photos call dark lab fruit nearly spoiled."),
     ("Fridge or counter matters. ", "The public fruit were stored at 10 °C, 20 °C or room temperature. The 10 °C "
-     "fruit are hardest (2.4 to 4.0 days off, against 1.2 to 2.8 at 20 °C): a photo cannot tell where the fruit "
+     "fruit are hardest (2.4 to 4.0 days off, against 1.8 to 2.8 at 20 °C): a photo cannot tell where the fruit "
      "will be kept."),
     ("For reference: ", "the public study's authors report about 1 day off (Xavier et al., Foods 2024), but their "
      "method is told the storage temperature and keeps the better of the two photos of each fruit."),
@@ -102,7 +101,7 @@ for text in (
     "Microwave scans as a training-only teacher (CAML-KD, SAMD) on the lab avocados and mangoes: the scan sees "
     "inside the fruit, which matters most once the skin is black. The app still needs only a photo.",
     "Fine-tune the public model on the lab avocados (each fruit held out in turn).",
-    "Colour correction against the background, so skin colour means the same under any light.",
+    "Colour correction against the background, so a photo looks the same under any light.",
     "Optionally, one tap in the app, fridge or counter (not a date), for the 10 °C case. Then revisit recalibration.",
 ):  # fmt: skip
     bullet(text)
