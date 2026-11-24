@@ -1,6 +1,6 @@
 """Example forecasts for the phase-2 report (ripen env: reads predictions only). Lab avocado 2 on days 1, 3, 5, 7
 (fruit cut-outs); below, the odds of spoiling on each day from that one photo for the phase-1 public model, the lab
-fine-tune and the scan-taught student (CAML), with the actual spoil window shaded. avo02 is held out in fold 1.
+fine-tune and the scan-taught students (CAML, SAMD), with the actual spoil window shaded. avo02 is held out in fold 1.
 
 python scripts/reports/one_photo_teacher_figure.py --run transformer_colour --seed 1
 Writes outputs/report_figures/one_photo_teacher_examples_{run}.png
@@ -26,10 +26,11 @@ def main() -> None:
     a = ap.parse_args()
     s = f"seed{a.seed}"
     t = REPO / "outputs" / "one_photo_teacher" / a.run / s / f"fold{FOLD}"
-    rows = (("Public only", REPO / "outputs" / "one_photo" / a.run / s / "predictions_lab.npz"),
-            ("Fine-tuned on lab", t / "finetune" / "predictions_test.npz"),
-            ("+ scan teacher", t / "kd" / "predictions_test.npz"))  # fmt: skip
-    fig, ax = plt.subplots(1 + len(rows), len(DAYS), figsize=(10, 6.4),
+    rows = (("Public\nonly", REPO / "outputs" / "one_photo" / a.run / s / "predictions_lab.npz"),
+            ("Fine-tuned\non lab", t / "finetune" / "predictions_test.npz"),
+            ("+ scan teacher\n(CAML)", t / "kd" / "predictions_test.npz"),
+            ("+ scan teacher\n(SAMD)", t / "samd" / "predictions_test.npz"))  # fmt: skip
+    fig, ax = plt.subplots(1 + len(rows), len(DAYS), figsize=(10, 7.6),
                            gridspec_kw={"height_ratios": [1.2] + [1] * len(rows)})  # fmt: skip
     for j, day in enumerate(DAYS):
         im = Image.open(REPO / "data" / "fruit_only" / "a2sl" / f"day{day:02d}" / "02_side.jpg")

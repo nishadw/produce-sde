@@ -82,6 +82,8 @@ def main() -> None:
                     continue
                 agg = {k: float(np.mean([r[k] for r in runs])) for k in ("score", "mae", "cov80")}
                 agg["score_range"] = [float(min(r["score"] for r in runs)), float(max(r["score"] for r in runs))]
+                agg["mae_range"] = [float(min(r["mae"] for r in runs)), float(max(r["mae"] for r in runs))]
+                agg["mae_seeds"] = [float(r["mae"]) for r in runs]
                 agg["scanned4_score"] = float(np.mean([r["score"] for r in runs4]))
                 pf = runs[0]["per_fruit"]
                 agg["per_fruit"] = {fr: float(np.mean([r["per_fruit"][fr] for r in runs])) for fr in pf}
