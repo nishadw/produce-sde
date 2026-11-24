@@ -52,3 +52,12 @@ photos, lab 15 fruit / 42 photos (3 photographed already spoiled).
 - Models latent SDE / transformer / latent ODE x fruit-only / skin colour x 3 seeds: jobs 8540149-8540166, summary
   8540167 -> `outputs/one_photo_teacher/summary.md` (`scripts/analysis/one_photo_teacher_compare.py`).
 - Mangoes not used yet (the student is an avocado app).
+
+### Phase 2 results (2026-11-23)
+
+All 19 jobs completed (`outputs/one_photo_teacher/summary.md`; report `../results/2026-11-23_one-photo-phase2-teacher.docx`).
+- Lab fine-tune is the big step: lab day error 1.6-7.5 d (public only) -> 0.9-1.5 d for every model/variant.
+- Scan teacher (CAML/SAMD) within seed spread of the fine-tune for latent SDE/ODE; CAML hurts latent ODE. Best case
+  transformer colour 0.48 -> 0.39, but the photo-only-teacher control gets 0.42.
+- Teacher with scans at test time beats the fine-tune by at most 0.12, worse for 3 of 6: scans add little here.
+- Caveat: lab spoil labels are one window for every fruit (day 7-9), so lab scores reward recognising the study day.

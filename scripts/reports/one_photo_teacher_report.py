@@ -99,7 +99,7 @@ for lead, text in (
      "scans."),
     ("The scans themselves add little here. ", "Even the teacher, which sees the scan when predicting, beats the "
      "fine-tune by at most 0.12 and is worse for three of the six. A student "
-     " cannot learn more than its teacher knows."),
+     "cannot learn more than its teacher knows."),
     ("Why: too few scans, and labels set by date. ", "Only 20 scanned photos from mostly 4 fruit. And the lab study "
      "gave every avocado the same spoil window (day 7 to 9), so a model that recognises the study day from the photo "
      "already scores well: Figure 1's forecasts snap to it. Lab scores are therefore flattering and do not show the "
