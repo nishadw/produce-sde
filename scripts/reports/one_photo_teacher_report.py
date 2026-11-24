@@ -23,8 +23,7 @@ FT, CAML, SAMD = "Fine-tuned on lab photos", "Taught by scan teacher (CAML)", "T
 
 
 def cell(g):
-    lo, hi = g["mae_range"]
-    return f"{g['mae']:.1f} d ({lo:.1f}-{hi:.1f})"
+    return f"{g['mae']:.1f} days"
 
 
 def rows(model):
@@ -58,8 +57,8 @@ for lead, text in (
      "teaching term on the scanned photos. CAML: the student copies the teacher's forecast. SAMD: teacher and "
      "student take turns, the teacher restarted from the student each round, and the student copies its internal "
      "features."),
-    ("Three models, two photo variants, 3 seeds each. ", "Transformer, latent SDE, latent ODE; fruit only and skin "
-     "colour (image matching cannot learn from a teacher). Every photo has its background removed."),
+    ("Three models, two photo variants, 3 seeds each. ", "Transformer, latent SDE, latent ODE (image matching "
+     "cannot learn from a teacher). Each reads either the fruit-only photo or just its skin colour."),
 ):  # fmt: skip
     bullet(text, lead=lead)
 
@@ -71,9 +70,11 @@ para("Bars: the odds it gives for each day; green: when the fruit actually spoil
 
 doc.add_heading("3. Results", level=1)
 para("On the 12 lab avocados, each scored only when held out. Day error: days between the predicted and actual "
-     "spoil day, every fruit counting equally; mean of 3 runs, with the lowest and highest run in brackets.",
+     "spoil day, every fruit counting equally; mean of 3 runs. Fruit only: the model reads the whole photo with the "
+     "background removed. Skin colour: the model reads only 12 numbers about the skin's colour (how bright, how "
+     "green or dark, how blotchy).",
      size=9.5, after=3)  # fmt: skip
-HDR = ["Method", "Fruit only: day error", "Skin colour: day error"]
+HDR = ["Method", "Day error, fruit-only photo", "Day error, skin colour only"]
 WIDTHS = [2.2, 2.0, 2.0]
 for model in MODELS:
     sub(model)
@@ -91,7 +92,8 @@ for lead, text in (
      "camera's fruit."),
     ("CAML helps a little, SAMD does not. ", f"CAML lowers the day error for the transformer ({d(T, R, FT)} to "
      f"{d(T, R, CAML)}; {d(T, C, FT)} to {d(T, C, CAML)}) and the latent SDE ({d(E, R, FT)} to {d(E, R, CAML)}; "
-     f"{d(E, C, FT)} to {d(E, C, CAML)}), but by under 0.12 days, inside the spread between runs. It hurts the "
+     f"{d(E, C, FT)} to {d(E, C, CAML)}), but by under 0.12 days, "
+     "about as much as two runs of the same method differ. It hurts the "
      f"latent ODE ({d(O, C, FT)} to {d(O, C, CAML)} on skin colour). SAMD is level with the fine-tune or worse."),
     ("Why so little: too few scans, and labels set by date. ", "Only 20 scanned photos from mostly 4 fruit. And the "
      "lab study gave every avocado the same spoil window (day 7 to 9), so a model that recognises the study day from "
